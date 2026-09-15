@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/*
+ * "Engineering Drawing" design system — technology-stack.md §3.5 requires a
+ * 100% custom token layer. No default Tailwind palette ships to production.
+ * Authoritative token table: docs/project/ui-ux-plan.md §4.
+ */
+@theme {
+  /* Paper: warm drafting-paper backgrounds */
+  --color-paper: #f5f4f0;
+  --color-paper-raised: #ffffff;
+  --color-paper-sunken: #eceae3;
+
+  /* Graphite: ink & structural grays */
+  --color-graphite-900: #1a1d21;
+  --color-graphite-700: #3a3f45;
+  --color-graphite-500: #6b7078;
+  --color-graphite-300: #a9adb3;
+  --color-graphite-100: #d7d9dc;
+
+  /* Accent: safety orange — the single industrial accent (ui-ux-plan.md §4.1).
+     Primary actions, active states, focus rings. Sparingly: ≤5% of any screen. */
+  --color-accent: #e05a00;
+  --color-accent-hover: #c24e00;
+
+  /* Status: colorblind-safe pairings (shape/icon always reinforces color).
+     Full semantic set per ui-ux-plan.md §4.2 — bg + fg pairs; color never alone. */
+  --color-status-pass: #1e7d3c; /* green — within tolerance */
+  --color-status-warn: #b07d10; /* amber — within 10% of tolerance edge */
+  --color-status-fail: #b3261e; /* red — tolerance breach / lockout */
+  --color-status-pass-bg: #e7f2e4;
+  --color-status-pass-fg: #1e4d1b;
+  --color-status-warn-bg: #fbf0d9;
+  --color-status-warn-fg: #7a5200;
+  --color-status-fail-bg: #f9e3e0;
+  --color-status-fail-fg: #8c1d18;
+  /* Info: auto-computed values (ƒx AUTO-CALC) and neutral notices (§4.2). */
+  --color-status-info-bg: #e3edf5;
+  --color-status-info-fg: #1f4a63;
+  /* Locked: immutable / signed record — ink, not a hue (§4.2). */
+  --color-status-locked-fg: #43464b;
+
+  /* Typography */
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Radii: technical, squared-off feel — 2px inputs/cells, 4px cards/buttons.
+     ui-ux-plan.md §3.2: nothing above 4px, no pill shapes. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+
+  /* Spacing baseline: 4px grid */
+  --spacing: 0.25rem;
+}
+
+/* Base layer */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-graphite-900);
+    min-height: 100dvh;
+  }
+
+  /* Numeric readouts and measurement values render in Plex Mono. */
+  .measurement {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+ * Print engine (technology-stack.md §3.8) — Phase 0 stub.
+ * Format ST/QC/02 and ST/QC/04 print fidelity lands in the PDF phase.
+ */
+@media print {
+  body {
+    background: #ffffff;
+  }
+}
