@@ -28,7 +28,9 @@ describe("dewPoint", () => {
           const rh2 = Math.min(100, rh + step);
           const a = dewPoint(celsius(t), percentRH(rh));
           const b = dewPoint(celsius(t), percentRH(rh2));
-          expect((b as number)).toBeGreaterThanOrEqual((a as number));
+          // ≥, not strictly >: dew point SATURATES as RH → 100 %RH (plan F-06
+          // note), so equal inputs can legitimately yield equal outputs.
+          expect(b as number).toBeGreaterThanOrEqual(a as number);
         },
       ),
     );

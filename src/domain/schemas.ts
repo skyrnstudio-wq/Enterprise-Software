@@ -8,9 +8,7 @@ import { z } from "zod";
 /** Batch header metadata (PRD DIM-02). */
 export const batchHeaderSchema = z.object({
   poNumber: z.string().min(1, "PO Number is required"),
-  deliveryBatchCode: z
-    .string()
-    .regex(/^\d{4}-\d{2}$/, "Expected format: 2604-02 (YYMM-lot)"),
+  deliveryBatchCode: z.string().regex(/^\d{4}-\d{2}$/, "Expected format: 2604-02 (YYMM-lot)"),
   inspectionDate: z.iso.date(),
   lotQuantity: z.number().int().positive(),
 });
@@ -21,6 +19,14 @@ export const psychrometricSchema = z.object({
   ambientTempC: z.number().min(-45).max(60),
   relativeHumidity: z.number().min(1).max(100),
   steelTempC: z.number().min(-45).max(60),
+  /**
+   * Client-claimed dew point / ΔT for display and the local lock-out gate.
+   * The submit RPC recomputes both server-side and never trusts these
+   * (backend-architecture.md §5.1) — they are transported for audit
+   * comparison only.
+   */
+  dewPointC: z.number().optional(),
+  deltaTC: z.number().optional(),
 });
 export type PsychrometricInput = z.infer<typeof psychrometricSchema>;
 

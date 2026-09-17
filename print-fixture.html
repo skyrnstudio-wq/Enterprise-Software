@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Print fixture — controlled report layouts</title>
+  </head>
+  <body>
+    <div id="stqc02"></div>
+    <div id="stqc04"></div>
+    <script type="module">
+      // Print-regression fixture (testing-quality-plan §2 / report-export-spec
+      // §6). Dev-only page: mounts BOTH report renderers with deterministic
+      // fixtures — the same component tree the app prints, no Supabase, no
+      // auth. Served (and transformed) by `vite dev`; never built for prod.
+      import { createElement } from "react";
+      import { createRoot } from "react-dom/client";
+
+      const h = createElement;
+
+      const batchId = "b7e6a1c2-0000-4000-8000-000000000001";
+      const header = {
+        batchId,
+        status: "APPROVED",
+        workflow: "DIMENSIONAL",
+        itemCode: "W1G00005572",
+        drawingNumber: "W1G00005572A",
+        revision: "A",
+        customer: "FLENDER / WINERGY",
+        poNumber: "PO-7741",
+        deliveryBatchCode: "2604-02",
+        inspectionDate: "2026-09-16",
+        lotQty: 25,
+      };
+      const signOffs = [
+        { role: "INSPECTOR", name: "R Patil", decision: "SUBMIT", comments: null, signedAtIso: "2026-09-16T09:30:00Z" },
+        { role: "QUALITY_HEAD", name: "S Kulkarni", decision: "APPROVE", comments: null, signedAtIso: "2026-09-16T11:05:00Z" },
+      ];
+
+      // 53 rows mirroring the audited Spiral Air Duct Cap fixture; row 3
+      // carries a deliberate breach so the ✗ treatment is in the baseline.
+      const rows = Array.from({ length: 53 }, (_, i) => ({
+        serial: i + 1,
+        label: i === 2 ? "Throat dia at weld" : `Dimension ${String(i + 1)}`,
+        symbol: i === 5 ? "Ø" : null,
+        isReference: i === 0,
+        nominal: i === 2 ? 2065 : 25 + i * 0.5,
+        tolPlus: i === 2 ? 2 : 0.2,
+        tolMinus: i === 2 ? 2 : 0.2,
+        instrumentCode: i % 7 === 3 ? "MC-02" : "VC-04",
+        values:
+          i === 2
+            ? [2068, 2064, 2065, 2064.5, 2065.5]
+            : [25 + i * 0.5 - 0.1, 25 + i * 0.5, 25 + i * 0.5 + 0.1, 25 + i * 0.5, 25 + i * 0.5 - 0.05],
+      }));
+
+      const coats = [
+        {
+          coatNo: 1, product: "Hempadur Quattro 22090", ral: "RAL 22090",
+          partABatch: "PA-4471", partAMfg: "2026-04-11", partBBatch: "PB-118", partBMfg: null,
+          thinnerBatch: null, viscosityS: 29, wftUm: 90,
+          ambientC: 30.2, rhPct: 69.8, steelC: 28.8, dewPointC: 24.1, deltaTC: 4.7,
+          verdict: "APPROVED",
+        },
+        {
+          coatNo: 2, product: "Hempadur Mastic 17634", ral: "RAL 7038",
+          partABatch: "PA-4502", partAMfg: "2026-05-02", partBBatch: "PB-121", partBMfg: null,
+          thinnerBatch: "TH-09", viscosityS: 30, wftUm: 100,
+          ambientC: 31.5, rhPct: 74.2, steelC: 30.9, dewPointC: 26.3, deltaTC: 4.6,
+          verdict: "APPROVED",
+        },
+      ];
+      const dft = {
+        INSIDE: [240, 245, 238, 250, 242, 244, 239, 246, 241, 243, 247, 240, 244, 242, 238, 249, 241, 243, 246, 240, 244, 239, 247, 242, 245, 241],
+        OUTSIDE: [180, 184, 178, 186, 181, 183, 179, 185, 182, 180, 184, 178, 186, 181, 183, 179, 185, 182, 180, 184, 178, 186, 181, 183, 179, 185],
+      };
+
+      const [dimModule, coatModule] = await Promise.all([
+        import("/src/components/reports/ReportDim.tsx"),
+        import("/src/components/reports/ReportCoating.tsx"),
+      ]);
+
+      const dimData = { workflow: "DIMENSIONAL", header, signOffs, rows };
+      const coatData = {
+        workflow: "COATING",
+        header: { ...header, workflow: "COATING" },
+        signOffs,
+        surfacePrep: {
+          steelGrade: "MS Sheet Fabrication", weldEdgeOk: true, solventCleanOk: true,
+          waterBreakPass: true, blastMethod: "Abrasive Blast Cleaning", blastGrade: "Sa 2.5",
+          gritSize: "G-40", profileUm: 62,
+        },
+        coats,
+        dft,
+        dftNominals: { inside: 240, outside: 180 },
+        systems: { inside: "C4 High", outside: "C3 High" },
+        visual: { pinholes: false, sagging: false, gloss_loss: false, peel_off: false, blisters: false },
+      };
+
+      createRoot(document.getElementById("stqc02")).render(h(dimModule.ReportDim, { data: dimData }));
+      createRoot(document.getElementById("stqc04")).render(h(coatModule.ReportCoating, { data: coatData }));
+    </script>
+  </body>
+</html>
