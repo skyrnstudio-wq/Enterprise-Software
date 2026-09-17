@@ -30,5 +30,8 @@ Thumbs.db
 .idea
 .freebuff/
 
+# Supabase CLI transient state
+supabase/.temp/
+
 # TypeScript incremental
 *.tsbuildinfo

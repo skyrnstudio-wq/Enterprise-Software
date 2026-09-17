@@ -9,50 +9,296 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAdminInstrumentsRouteImport } from './routes/_authenticated/admin/instruments'
+import { Route as AuthenticatedAdminItemsRouteImport } from './routes/_authenticated/admin/items'
+import { Route as AuthenticatedBatchBatchIdRouteImport } from './routes/_authenticated/batch/$batchId'
+import { Route as AuthenticatedBatchNewRouteImport } from './routes/_authenticated/batch/new'
+import { Route as AuthenticatedCoatingBatchIdRouteImport } from './routes/_authenticated/coating/$batchId'
+import { Route as AuthenticatedCoatingNewRouteImport } from './routes/_authenticated/coating/new'
+import { Route as AuthenticatedReportsBatchIdRouteImport } from './routes/_authenticated/reports/$batchId'
+import { Route as AuthenticatedReviewIndexRouteImport } from './routes/_authenticated/review/index'
+import { Route as AuthenticatedReviewBatchIdRouteImport } from './routes/_authenticated/review/$batchId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminInstrumentsRoute =
+  AuthenticatedAdminInstrumentsRouteImport.update({
+    id: '/admin/instruments',
+    path: '/admin/instruments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminItemsRoute = AuthenticatedAdminItemsRouteImport.update({
+  id: '/admin/items',
+  path: '/admin/items',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedBatchBatchIdRoute =
+  AuthenticatedBatchBatchIdRouteImport.update({
+    id: '/batch/$batchId',
+    path: '/batch/$batchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedBatchNewRoute = AuthenticatedBatchNewRouteImport.update({
+  id: '/batch/new',
+  path: '/batch/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCoatingBatchIdRoute =
+  AuthenticatedCoatingBatchIdRouteImport.update({
+    id: '/coating/$batchId',
+    path: '/coating/$batchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCoatingNewRoute = AuthenticatedCoatingNewRouteImport.update({
+  id: '/coating/new',
+  path: '/coating/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReportsBatchIdRoute =
+  AuthenticatedReportsBatchIdRouteImport.update({
+    id: '/reports/$batchId',
+    path: '/reports/$batchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReviewIndexRoute =
+  AuthenticatedReviewIndexRouteImport.update({
+    id: '/review/',
+    path: '/review/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReviewBatchIdRoute =
+  AuthenticatedReviewBatchIdRouteImport.update({
+    id: '/review/$batchId',
+    path: '/review/$batchId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/login': typeof LoginRoute
+  '/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
+  '/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
+  '/batch/new': typeof AuthenticatedBatchNewRoute
+  '/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
+  '/coating/new': typeof AuthenticatedCoatingNewRoute
+  '/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
+  '/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
+  '/review/': typeof AuthenticatedReviewIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
+  '/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
+  '/batch/new': typeof AuthenticatedBatchNewRoute
+  '/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
+  '/coating/new': typeof AuthenticatedCoatingNewRoute
+  '/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
+  '/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
+  '/review': typeof AuthenticatedReviewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
+  '/_authenticated/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/_authenticated/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
+  '/_authenticated/batch/new': typeof AuthenticatedBatchNewRoute
+  '/_authenticated/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
+  '/_authenticated/coating/new': typeof AuthenticatedCoatingNewRoute
+  '/_authenticated/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
+  '/_authenticated/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
+  '/_authenticated/review/': typeof AuthenticatedReviewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/admin/instruments'
+    | '/admin/items'
+    | '/batch/$batchId'
+    | '/batch/new'
+    | '/coating/$batchId'
+    | '/coating/new'
+    | '/reports/$batchId'
+    | '/review/$batchId'
+    | '/review/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/login'
+    | '/'
+    | '/admin/instruments'
+    | '/admin/items'
+    | '/batch/$batchId'
+    | '/batch/new'
+    | '/coating/$batchId'
+    | '/coating/new'
+    | '/reports/$batchId'
+    | '/review/$batchId'
+    | '/review'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/'
+    | '/_authenticated/admin/instruments'
+    | '/_authenticated/admin/items'
+    | '/_authenticated/batch/$batchId'
+    | '/_authenticated/batch/new'
+    | '/_authenticated/coating/$batchId'
+    | '/_authenticated/coating/new'
+    | '/_authenticated/reports/$batchId'
+    | '/_authenticated/review/$batchId'
+    | '/_authenticated/review/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/instruments': {
+      id: '/_authenticated/admin/instruments'
+      path: '/admin/instruments'
+      fullPath: '/admin/instruments'
+      preLoaderRoute: typeof AuthenticatedAdminInstrumentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/items': {
+      id: '/_authenticated/admin/items'
+      path: '/admin/items'
+      fullPath: '/admin/items'
+      preLoaderRoute: typeof AuthenticatedAdminItemsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/batch/$batchId': {
+      id: '/_authenticated/batch/$batchId'
+      path: '/batch/$batchId'
+      fullPath: '/batch/$batchId'
+      preLoaderRoute: typeof AuthenticatedBatchBatchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/batch/new': {
+      id: '/_authenticated/batch/new'
+      path: '/batch/new'
+      fullPath: '/batch/new'
+      preLoaderRoute: typeof AuthenticatedBatchNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/coating/$batchId': {
+      id: '/_authenticated/coating/$batchId'
+      path: '/coating/$batchId'
+      fullPath: '/coating/$batchId'
+      preLoaderRoute: typeof AuthenticatedCoatingBatchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/coating/new': {
+      id: '/_authenticated/coating/new'
+      path: '/coating/new'
+      fullPath: '/coating/new'
+      preLoaderRoute: typeof AuthenticatedCoatingNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports/$batchId': {
+      id: '/_authenticated/reports/$batchId'
+      path: '/reports/$batchId'
+      fullPath: '/reports/$batchId'
+      preLoaderRoute: typeof AuthenticatedReportsBatchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/review/': {
+      id: '/_authenticated/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof AuthenticatedReviewIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/review/$batchId': {
+      id: '/_authenticated/review/$batchId'
+      path: '/review/$batchId'
+      fullPath: '/review/$batchId'
+      preLoaderRoute: typeof AuthenticatedReviewBatchIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminInstrumentsRoute: typeof AuthenticatedAdminInstrumentsRoute
+  AuthenticatedAdminItemsRoute: typeof AuthenticatedAdminItemsRoute
+  AuthenticatedBatchBatchIdRoute: typeof AuthenticatedBatchBatchIdRoute
+  AuthenticatedBatchNewRoute: typeof AuthenticatedBatchNewRoute
+  AuthenticatedCoatingBatchIdRoute: typeof AuthenticatedCoatingBatchIdRoute
+  AuthenticatedCoatingNewRoute: typeof AuthenticatedCoatingNewRoute
+  AuthenticatedReportsBatchIdRoute: typeof AuthenticatedReportsBatchIdRoute
+  AuthenticatedReviewBatchIdRoute: typeof AuthenticatedReviewBatchIdRoute
+  AuthenticatedReviewIndexRoute: typeof AuthenticatedReviewIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminInstrumentsRoute: AuthenticatedAdminInstrumentsRoute,
+  AuthenticatedAdminItemsRoute: AuthenticatedAdminItemsRoute,
+  AuthenticatedBatchBatchIdRoute: AuthenticatedBatchBatchIdRoute,
+  AuthenticatedBatchNewRoute: AuthenticatedBatchNewRoute,
+  AuthenticatedCoatingBatchIdRoute: AuthenticatedCoatingBatchIdRoute,
+  AuthenticatedCoatingNewRoute: AuthenticatedCoatingNewRoute,
+  AuthenticatedReportsBatchIdRoute: AuthenticatedReportsBatchIdRoute,
+  AuthenticatedReviewBatchIdRoute: AuthenticatedReviewBatchIdRoute,
+  AuthenticatedReviewIndexRoute: AuthenticatedReviewIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

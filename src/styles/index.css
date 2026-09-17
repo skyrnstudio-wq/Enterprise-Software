@@ -1,15 +1,58 @@
 @import "tailwindcss";
 
 /*
+ * Self-hosted IBM Plex (F-04 closure) — no CDN, offline-first safe; the files
+ * live in /public/fonts and are precached by Workbox (globPatterns includes
+ * woff2). Fallback stack keeps .measurement tabular-nums if loading fails
+ * (edge 2.16). Plan weights: Sans 400/500/600, Mono 400/500 (ui-ux-plan §3.1).
+ */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSans-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/IBMPlexMono-Medium.woff2") format("woff2");
+}
+
+/*
  * "Engineering Drawing" design system — technology-stack.md §3.5 requires a
  * 100% custom token layer. No default Tailwind palette ships to production.
  * Authoritative token table: docs/project/ui-ux-plan.md §4.
  */
 @theme {
-  /* Paper: warm drafting-paper backgrounds */
-  --color-paper: #f5f4f0;
-  --color-paper-raised: #ffffff;
-  --color-paper-sunken: #eceae3;
+  /* Paper: warm drafting-paper backgrounds — plan §4.1 exact hexes
+     (F-02 residual closed: #F4F4F2 / #FCFCFB / #ECECEA). */
+  --color-paper: #f4f4f2;
+  --color-paper-raised: #fcfcfb;
+  --color-paper-sunken: #ececea;
 
   /* Graphite: ink & structural grays */
   --color-graphite-900: #1a1d21;
@@ -74,11 +117,192 @@
 }
 
 /*
- * Print engine (technology-stack.md §3.8) — Phase 0 stub.
- * Format ST/QC/02 and ST/QC/04 print fidelity lands in the PDF phase.
+ * Print engine — execution-plan Phase 6 steps 1–3 + report-export-spec §5.
+ * The two controlled QMS formats (ST/QC/02 Rev 02, ST/QC/04 Rev 01) print
+ * from the SAME review components with a data-print variant: inputs become
+ * text, virtualization is irrelevant (full grid), and every breakable unit
+ * carries explicit keep-together rules.
  */
+
+@page {
+  size: A4 portrait;
+  /* Audited-original margins (workbook-audit §3: 12.7 mm binding edge). */
+  margin: 14mm 12mm 16mm 12mm;
+}
+
+/* Static footer (plan decision): browser pipelines don't support CSS running
+   elements, so each report sheet ends with a `.print-footer` block carrying
+   format · rev · issue date · batch id · export ref. The print dialog
+   supplies per-page numbers; if the client QH rejects that at the §6
+   fidelity session, the Puppeteer fallback (pre-approved in
+   technology-stack.md §3.8) provides `page n of m` via footerTemplate. */
+.print-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1pt solid #1a1d21;
+  padding-top: 4pt;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 8.5pt;
+  color: #1a1d21;
+}
+
+.print-letterhead {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12pt;
+  align-items: start;
+  border-bottom: 2pt solid #1a1d21;
+  padding-bottom: 8pt;
+}
+
+.print-field-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.print-field-table th,
+.print-field-table td {
+  border: 0.5pt solid #444;
+  padding: 3pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  font-size: 9pt;
+}
+.print-field-table th {
+  background: #efefed;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.print-field-table td,
+.print-field-table th {
+  font-family: var(--font-sans);
+}
+.print-field-table .measurement,
+.print-field-table .measurement td,
+.print-field-table .measurement th {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.print-section-title {
+  font-size: 9pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 10pt 0 4pt;
+}
+
+.print-signature-line {
+  border-top: 1pt solid #1a1d21;
+  margin-top: 22pt;
+}
+
+/* Edge 6.5: status is never hue-only — glyphs survive B/W printing. Chips
+   print with borders so light fills remain visible. */
 @media print {
+  html,
   body {
+    background: #ffffff !important;
+  }
+
+  /* The app chrome (headers, action bars, rails) never prints — report routes
+     render themselves OUTSIDE the chrome; any other screen hitting Ctrl+P
+     swaps to the blocking notice via usePrintGuard. */
+  [data-app-chrome] {
+    display: none !important;
+  }
+
+  .print-sheet {
+    box-shadow: none;
+    border: none;
+    margin: 0;
+    width: 100%;
     background: #ffffff;
   }
+
+  .print-sheet [data-print-hide] {
+    display: none !important;
+  }
+
+  .print-sheet .print-body * {
+    visibility: visible;
+  }
+
+  /* The overlay chrome of the report route itself (close button, export
+     button, actions) never prints. */
+  .print-sheet [data-report-actions] {
+    display: none !important;
+  }
+
+  /* Edge 6.1: no row ever splits across a page break; thead repeats. */
+  .print-sheet tr,
+  .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Edge 6.4: the DFT statistics block is a keep-together unit. */
+  .print-stats-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Edge 6.3: sign-off follows the last grid page — never orphaned alone
+     right after an empty grid tail. */
+  .print-signoff {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-before: avoid;
+  }
+
+  /* Edge 6.2: labels wrap BETWEEN tokens, never inside a symbol+value pair. */
+  .print-label {
+    white-space: normal;
+  }
+  .print-label .tok {
+    display: inline-block;
+  }
+
+  /* Grayscale discipline: borders darken; fills lighten but stay visible. */
+  .print-sheet .print-chip {
+    border: 0.5pt solid #444;
+  }
+
+  /* Section repeated as running header on continuation pages (6.1). */
+  .print-repeat thead {
+    display: table-header-group;
+  }
+}
+
+/* The report sheet is styled for print at all times on screen (WYSIWYG —
+   what the QH sees on screen is exactly what prints; report-export-spec §1).
+   These are the print-fidelity properties that also apply on screen. */
+.print-sheet {
+  font-size: 10pt;
+  color: #1a1d21;
+}
+.print-sheet .print-label {
+  font-family: var(--font-sans);
+  font-size: 9pt;
+}
+.print-sheet .measurement {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.print-sheet table {
+  border-collapse: collapse;
+}
+.print-sheet th,
+.print-sheet td {
+  border: 0.5pt solid #444;
+  padding: 3pt 5pt;
+  font-size: 9pt;
+  text-align: left;
+  vertical-align: top;
+}
+.print-sheet thead th {
+  background: #efefed;
+  font-weight: 500;
 }
