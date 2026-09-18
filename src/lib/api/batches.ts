@@ -273,3 +273,36 @@ export async function listBatches(): Promise<BatchListRow[]> {
     updated_at: r.updated_at as string,
   }));
 }
+
+/**
+ * ⌘K batch search (ui-ux-plan §2.1) — reaches ANY batch by item code, PO,
+ * or lot (the dashboard list caps at 100 rows; search does not). Ilike
+ * matching server-side; RLS scopes results to the caller's visibility.
+ */
+export async function searchBatches(term: string): Promise<BatchListRow[]> {
+  // Commas are the .or() list separator — strip them from user input.
+  const q = term.trim().replace(/,/g, "");
+  if (q.length < 2) return [];
+  const { data, error } = await supabase
+    .from("batches")
+    .select(
+      "id, status, workflow, po_number, delivery_batch_code, inspection_date, updated_at, items ( item_code )",
+    )
+    .or(
+      `po_number.ilike.%${q}%,delivery_batch_code.ilike.%${q}%,items.item_code.ilike.%${q}%`,
+    )
+    .order("updated_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  const rows = data as unknown as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    id: r.id as string,
+    status: r.status as BatchListRow["status"],
+    workflow: r.workflow as BatchListRow["workflow"],
+    item_code: (r.items as { item_code: string } | null)?.item_code ?? "—",
+    po_number: r.po_number as string,
+    delivery_batch_code: r.delivery_batch_code as string,
+    inspection_date: r.inspection_date as string,
+    updated_at: r.updated_at as string,
+  }));
+}

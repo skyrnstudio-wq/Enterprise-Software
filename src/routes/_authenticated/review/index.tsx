@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { SectionCard, EmptyState } from "@/components/ui/SectionCard";
 import { Caption, StatusChip } from "@/components/ui/StatusChip";
 import { DataTable, THead, TH, TR, TD } from "@/components/ui/DataTable";
+import { QueryState, TableSkeleton } from "@/components/ui/QueryState";
 
 export const Route = createFileRoute("/_authenticated/review/")({
   component: ReviewQueuePage,
@@ -87,12 +88,22 @@ function ReviewQueuePage() {
         </Caption>
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyState
-          icon={<ClipboardList size={24} />}
-          message="No batches awaiting review. Submitted inspections appear here in real time."
-        />
-      ) : (
+      <QueryState
+        isLoading={queue.isLoading}
+        isError={queue.isError}
+        error={queue.error}
+        onRetry={() => {
+          void queue.refetch();
+        }}
+        isEmpty={rows.length === 0}
+        emptyState={
+          <EmptyState
+            icon={<ClipboardList size={24} />}
+            message="No batches awaiting review. Submitted inspections appear here in real time."
+          />
+        }
+        skeleton={<TableSkeleton rows={4} />}
+      >
         <SectionCard title={`Awaiting decision (${String(rows.length)})`} letter="Q">
           <DataTable>
             <THead>
@@ -159,7 +170,7 @@ function ReviewQueuePage() {
             </tbody>
           </DataTable>
         </SectionCard>
-      )}
+      </QueryState>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { StatusChip, type ChipStatus } from "@/components/ui/StatusChip";
 import { SectionCard, EmptyState } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
 import { FormRow, TextInput } from "@/components/ui/FormRow";
+import { TableSkeleton } from "@/components/ui/QueryState";
 
 export const Route = createFileRoute("/_authenticated/admin/instruments")({
   component: InstrumentsPage,
@@ -47,7 +48,13 @@ export default function InstrumentsPage() {
     status: "pass" | "fail";
   } | null>(null);
 
-  const { data: instruments = [], isLoading } = useQuery({
+  const {
+    data: instruments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["instruments", todayIso()],
     queryFn: () => listInstruments(todayIso()),
   });
@@ -147,8 +154,17 @@ export default function InstrumentsPage() {
         />
       </div>
 
-      {isLoading ? (
-        <EmptyState icon={<Wrench size={24} />} message="Loading registry…" />
+      {isError ? (
+        <div role="alert">
+          <p className="text-sm text-ink-700">
+            Couldn't load the registry: {error instanceof Error ? error.message : "service error"}
+          </p>
+          <Button variant="secondary" className="mt-3" onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : isLoading ? (
+        <TableSkeleton rows={6} />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Wrench size={24} />}

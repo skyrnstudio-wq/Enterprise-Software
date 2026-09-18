@@ -1,22 +1,22 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { env } from "@/lib/env";
 import { usePrintGuard } from "@/lib/print";
-import { Caption } from "@/components/ui/StatusChip";
+import { AppShell } from "@/components/layout/AppShell";
+import { BatchSearchDialog } from "@/components/search/BatchSearchDialog";
+import { Skeleton } from "@/components/ui/QueryState";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
 /**
- * Route guard — the layout wraps every post-login screen. The router also
- * threads `context.auth` for `beforeLoad` checks (router.ts); this component
- * handles the render-side redirect + MFA affordance gate (edge 2.14).
- *
- * Print (Phase 6): the whole shell carries `data-app-chrome` so the print
- * stylesheet hides it — a report route renders itself OUTSIDE the chrome
- * (its own overlay), and any other screen hitting Ctrl+P swaps to the
- * blocking notice (report-export-spec §1: only controlled layouts print).
+ * Route guard + shell host. The layout wraps every post-login screen and owns
+ * three cross-cutting concerns (ui-ux-plan §2.1):
+ * - the AppShell (side nav per role, Sunlight toggle, identity/sign-out);
+ * - the ⌘K batch-search palette;
+ * - the print guard (only controlled report layouts may print).
  */
 function AuthenticatedLayout() {
   // Report routes render through their own full-screen overlay, not the
@@ -24,24 +24,41 @@ function AuthenticatedLayout() {
   const onReportRoute =
     typeof window !== "undefined" && window.location.pathname.startsWith("/reports/");
   const printBlocked = usePrintGuard(onReportRoute);
-  const { user, profile, initializing, mfaSatisfied, hasRole } = useAuth();
+  const { user, profile, initializing, mfaSatisfied, hasRole, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchOpen, setSearchOpen] = useState(false);
 
+  // Session resolution failed → the login screen. (Dev bypass keeps a
+  // synthetic user, so /login stays reachable only when it's off.)
   useEffect(() => {
-    if (!initializing && !user) void navigate({ to: "/login" });
+    if (!initializing && user === null) void navigate({ to: "/login" });
   }, [initializing, user, navigate]);
+
+  // ⌘K / Ctrl+K toggles batch search from anywhere in the shell.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => { window.removeEventListener("keydown", onKey, true); };
+  }, []);
 
   if (initializing) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-paper">
-        <Caption>loading…</Caption>
+      <div className="flex min-h-dvh items-center justify-center bg-paper" aria-busy="true">
+        <div className="w-64 space-y-2" aria-live="polite">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-4 w-32" />
+        </div>
       </div>
     );
   }
 
-  if (!user) return null;
-
-  const needsMfa = hasRole("QUALITY_HEAD", "ADMIN") && !mfaSatisfied;
+  if (user === null) return null;
 
   if (printBlocked) {
     return (
@@ -60,32 +77,26 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div className="min-h-dvh bg-paper text-ink-900" data-app-chrome>
-      <header className="border-b border-ink-200 bg-paper-raised px-6 py-3">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <span className="text-sm font-semibold uppercase tracking-wide">
-            Simran QC — Inspection Platform
-          </span>
-          <div className="flex items-center gap-3">
-            {profile ? <span className="text-xs text-ink-700">{profile.full_name}</span> : null}
-            {needsMfa ? (
-              <span className="rounded-xs bg-status-warn-bg px-1.5 py-0.5 text-[11px] font-medium text-status-warn-fg">
-                ▲ MFA enrollment required
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        {needsMfa ? (
-          <div className="rounded-sm border border-status-warn-fg bg-status-warn-bg p-4 text-sm text-status-warn-fg">
-            Your role requires two-factor authentication. Enroll from the profile menu before using
-            QH/Admin affordances — approval actions remain blocked server-side until then
-            (SO-01…04).
+    <>
+      <AppShell
+        profile={profile}
+        hasRole={hasRole}
+        mfaSatisfied={mfaSatisfied}
+        signOut={signOut}
+        onOpenSearch={() => {
+          setSearchOpen(true);
+        }}
+      >
+        {env.devBypassAuth ? (
+          <div className="mb-4">
+            <span className="rounded-xs bg-ink-100 px-2 py-0.5 text-[11px] font-mono text-ink-700">
+              Dev Mode (No Login)
+            </span>
           </div>
         ) : null}
         <Outlet />
-      </main>
-    </div>
+      </AppShell>
+      <BatchSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+    </>
   );
 }

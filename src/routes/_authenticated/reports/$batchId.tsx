@@ -8,6 +8,7 @@ import { fileNameFor, formatMetaFor } from "@/lib/report-meta";
 import { ReportDim } from "@/components/reports/ReportDim";
 import { ReportCoating } from "@/components/reports/ReportCoating";
 import { Caption } from "@/components/ui/StatusChip";
+import { QueryError } from "@/components/ui/QueryState";
 
 export const Route = createFileRoute("/_authenticated/reports/$batchId")({
   component: ReportPage,
@@ -33,10 +34,24 @@ function ReportPage() {
     queryFn: () => getReportData(batchId),
   });
 
+  if (detail.isError) {
+    return (
+      <div className="p-6">
+        <QueryError
+          title="Report unavailable"
+          error={detail.error}
+          onRetry={() => {
+            void detail.refetch();
+          }}
+        />
+      </div>
+    );
+  }
+
   if (detail.isLoading || detail.data === undefined) {
     return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-paper-sunken/60">
-        <Caption>{detail.isError ? "✕ report unavailable" : "loading report…"}</Caption>
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-paper-sunken/60" aria-busy="true">
+        <Caption aria-live="polite">preparing sheet…</Caption>
       </div>
     );
   }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Paintbrush, FileWarning, ClipboardList, Printer } from "lucide-react";
+import { FileWarning, ClipboardList, Plus } from "lucide-react";
 import { listBatches } from "@/lib/api/batches";
 import { listRejectionComments } from "@/lib/api/review";
 import { db } from "@/lib/dexie/db";
@@ -12,6 +12,7 @@ import { SectionCard, EmptyState } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
 import { StatusChip, Caption } from "@/components/ui/StatusChip";
 import { DataTable, THead, TH, TR, TD, Toast } from "@/components/ui/DataTable";
+import { QueryState, TableSkeleton } from "@/components/ui/QueryState";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
@@ -20,9 +21,10 @@ export const Route = createFileRoute("/_authenticated/")({
 const STALE_DRAFT_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Dashboard — ui-ux-plan §6.4 + application-flow §3: drafts strip (A4 rule:
- * >24 h drafts flagged), REJECTED batches pinned with QH comments inline,
- * then the batch list. The single primary action is "New dimensional batch".
+ * Dashboard — ui-ux-plan §6.4 + §6.2: KPI strip surfaces what needs action
+ * (rule A4), drafts strip flags >24 h drafts (A4 stale rule), REJECTED
+ * batches pin the QH comments inline (SO-03), then the batch list. ONE
+ * primary create action; per-workflow creation lives in the side nav.
  */
 function DashboardPage() {
   const navigate = Route.useNavigate();
@@ -94,24 +96,37 @@ function DashboardPage() {
   ];
 
   const now = Date.now();
-  const rejected = batches.data?.filter((b) => b.status === "REJECTED") ?? [];
-  const others = batches.data?.filter((b) => b.status !== "REJECTED") ?? [];
+  const list = batches.data ?? [];
+  const rejected = list.filter((b) => b.status === "REJECTED");
+  const others = list.filter((b) => b.status !== "REJECTED");
+
+  // KPI strip (§6.2 A4 — surface what's due). Mono figures, plain layout.
+  const kpis = [
+    { label: "In progress", value: list.filter((b) => b.status === "DRAFT").length },
+    { label: "Awaiting review", value: list.filter((b) => b.status === "SUBMITTED").length },
+    { label: "Returned", value: rejected.length },
+    { label: "Approved", value: list.filter((b) => b.status === "APPROVED").length },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Inspection batches</h1>
           <Caption>Dimensional · ST/QC/02 — Coating · ST/QC/04</Caption>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => void navigate({ to: "/coating/new" })}>
-            <Paintbrush size={16} className="mr-2 inline" /> New coating batch
-          </Button>
-          <Button onClick={() => void navigate({ to: "/batch/new" })}>
-            <Plus size={16} className="mr-2 inline" /> New dimensional batch
-          </Button>
-        </div>
+        <Button onClick={() => void navigate({ to: "/batch/new" })}>
+          <Plus size={16} aria-hidden /> New batch
+        </Button>
+      </div>
+
+      <div className="kpi-strip" aria-label="Batch counts by status">
+        {kpis.map((k) => (
+          <div key={k.label} className="px-4 py-3">
+            <div className="kpi-value">{String(k.value)}</div>
+            <Caption className="mt-1">{k.label}</Caption>
+          </div>
+        ))}
       </div>
 
       {/* Drafts strip — resume points + the A4 stale-draft rule (edge 3.13). */}
@@ -122,18 +137,17 @@ function DashboardPage() {
               const stale = now - new Date(d.savedAt).getTime() > STALE_DRAFT_MS;
               return (
                 <li key={d.batchId} className="flex items-center justify-between py-2">
-                  <span className="text-sm">
+                  <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                     <StatusChip
                       status={d.kind === "COATING" ? "info" : "locked"}
                       label={d.kind === "COATING" ? "COATING" : "DIM"}
-                      className="mr-3"
                     />
-                    <span className="measurement mr-3 font-medium">{d.itemCode}</span>
-                    <span className="text-ink-500">
+                    <span className="measurement font-medium">{d.itemCode}</span>
+                    <span className="sunlight-muted text-ink-500">
                       PO {d.po} · lot {d.lot}
                     </span>
                     {stale ? (
-                      <span className="ml-3 rounded-xs bg-status-warn-bg px-1.5 py-0.5 text-[11px] font-medium text-status-warn-fg">
+                      <span className="rounded-xs bg-status-warn-bg px-1.5 py-0.5 text-[11px] font-medium text-status-warn-fg">
                         ▲ untouched &gt; 24 h
                       </span>
                     ) : null}
@@ -141,7 +155,7 @@ function DashboardPage() {
                   <Link
                     to={d.kind === "COATING" ? "/coating/$batchId" : "/batch/$batchId"}
                     params={{ batchId: d.batchId }}
-                    className="text-sm font-medium text-accent hover:underline"
+                    className="sunlight-accent shrink-0 text-sm font-medium text-accent hover:underline"
                   >
                     Resume →
                   </Link>
@@ -160,10 +174,10 @@ function DashboardPage() {
               const rej = rejections.data?.[b.id];
               return (
                 <li key={b.id} className="flex items-center justify-between py-2">
-                  <span className="flex items-center gap-3 text-sm">
+                  <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                     <StatusChip status="fail" label="REJECTED" />
                     <span className="measurement font-medium">{b.item_code}</span>
-                    <span className="text-ink-500">
+                    <span className="sunlight-muted text-ink-500">
                       PO {b.po_number} · lot {b.delivery_batch_code}
                     </span>
                   </span>
@@ -176,7 +190,7 @@ function DashboardPage() {
                     <Link
                       to={b.workflow === "COATING" ? "/coating/$batchId" : "/batch/$batchId"}
                       params={{ batchId: b.id }}
-                      className="flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+                      className="sunlight-accent flex items-center gap-1 text-sm font-medium text-accent hover:underline"
                     >
                       <FileWarning size={14} /> Revise &amp; resubmit →
                     </Link>
@@ -189,19 +203,27 @@ function DashboardPage() {
       ) : null}
 
       <SectionCard title="All batches" letter="B">
-        {batches.isLoading ? (
-          <Caption>loading…</Caption>
-        ) : others.length === 0 ? (
-          <EmptyState
-            icon={<ClipboardList size={24} />}
-            message="No batches yet. Start the first dimensional inspection for this station."
-            action={
-              <Button onClick={() => void navigate({ to: "/batch/new" })}>
-                New dimensional batch
-              </Button>
-            }
-          />
-        ) : (
+        <QueryState
+          isLoading={batches.isLoading}
+          isError={batches.isError}
+          error={batches.error}
+          onRetry={() => {
+            void batches.refetch();
+          }}
+          isEmpty={others.length === 0}
+          emptyState={
+            <EmptyState
+              icon={<ClipboardList size={24} />}
+              message="No batches yet. Start the first dimensional inspection for this station."
+              action={
+                <Button onClick={() => void navigate({ to: "/batch/new" })}>
+                  New dimensional batch
+                </Button>
+              }
+            />
+          }
+          skeleton={<TableSkeleton rows={6} />}
+        >
           <DataTable>
             <THead>
               <TR>
@@ -237,11 +259,7 @@ function DashboardPage() {
                   <TD>
                     <StatusChip
                       status={
-                        b.status === "APPROVED"
-                          ? "pass"
-                          : b.status === "SUBMITTED"
-                            ? "info"
-                            : "locked"
+                        b.status === "APPROVED" ? "pass" : b.status === "SUBMITTED" ? "info" : "locked"
                       }
                       label={b.status}
                     />
@@ -251,9 +269,9 @@ function DashboardPage() {
                       <Link
                         to="/reports/$batchId"
                         params={{ batchId: b.id }}
-                        className="ml-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                        className="sunlight-accent ml-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
                       >
-                        <Printer size={12} /> Report
+                        Report
                       </Link>
                     ) : null}
                   </TD>
@@ -261,7 +279,7 @@ function DashboardPage() {
               ))}
             </tbody>
           </DataTable>
-        )}
+        </QueryState>
       </SectionCard>
 
       {toast !== null ? (
