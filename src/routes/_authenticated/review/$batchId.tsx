@@ -22,6 +22,7 @@ import { Caption, StatusChip } from "@/components/ui/StatusChip";
 import { SignOffBlock } from "@/components/ui/SignOffBlock";
 import { ApproveModal, RejectModal } from "@/components/review/DecisionModals";
 import { Toast } from "@/components/ui/DataTable";
+import { PanelsSkeleton } from "@/components/ui/QueryState";
 import { useNavigate } from "@tanstack/react-router";
 import { computeDftStats, evaluateIso19840 } from "@/domain/dft-stats";
 
@@ -170,7 +171,13 @@ function ReviewDetailPage() {
     }
   }
 
-  if (detail.isLoading) return <Caption>loading…</Caption>;
+  if (detail.isLoading) {
+    return (
+      <div className="space-y-4" aria-busy="true" aria-live="polite">
+        <PanelsSkeleton count={3} />
+      </div>
+    );
+  }
   if (detail.data === null || detail.data === undefined) {
     return (
       <SectionCard title="Record no longer available" letter="!">

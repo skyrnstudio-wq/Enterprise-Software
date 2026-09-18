@@ -3,6 +3,10 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 /**
  * Button — ui-ux-plan §3.2/§4.1. Radii 4px, safety-orange primary used
  * sparingly; secondary is hairline; destructive uses fail tokens.
+ *
+ * Touch contract (§8.2, shop floor): 44px minimum hit height, labels never
+ * wrap (`whitespace-nowrap` — a wrapped label escapes the box on narrow
+ * viewports), and a 1px pressed translate for tactile feedback (§5 motion).
  */
 type Variant = "primary" | "secondary" | "destructive" | "ghost";
 
@@ -22,7 +26,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; children: ReactNode }) {
   return (
     <button
-      className={`h-9 rounded-sm px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 text-sm font-medium transition-colors active:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0 ${styles[variant]} ${className}`}
       {...rest}
     >
       {children}

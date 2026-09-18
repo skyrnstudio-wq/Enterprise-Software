@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { homeForRole } from "@/lib/auth/roles";
+import { env } from "@/lib/env";
 import { Button } from "@/components/ui/Button";
 import { FormRow, TextInput } from "@/components/ui/FormRow";
 import { Caption } from "@/components/ui/StatusChip";
@@ -18,8 +18,15 @@ export const Route = createFileRoute("/login")({
  * picker. MFA-enrolled users get the TOTP step inline.
  */
 function LoginPage() {
-  const { signIn, verifyMfa, user, profile, initializing } = useAuth();
+  const { signIn, verifyMfa } = useAuth();
   const navigate = useNavigate();
+
+  // Dev bypass: /login forwards to the dashboard (AuthProvider carries the
+  // synthetic session). A real deployment never sets the flag, so this
+  // screen is always the front door in staging/production.
+  useEffect(() => {
+    if (env.devBypassAuth) void navigate({ to: "/" });
+  }, [navigate]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +34,6 @@ function LoginPage() {
   const [totp, setTotp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  // Already signed in (or just completed MFA): silent role routing.
-  useEffect(() => {
-    if (!initializing && user && profile) {
-      void navigate({ to: homeForRole(profile.role) });
-    }
-  }, [initializing, user, profile, navigate]);
 
   async function onSubmit(e: React.SyntheticEvent): Promise<void> {
     e.preventDefault();

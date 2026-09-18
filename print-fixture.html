@@ -15,6 +15,10 @@
       // auth. Served (and transformed) by `vite dev`; never built for prod.
       import { createElement } from "react";
       import { createRoot } from "react-dom/client";
+      // The design system — fonts, tokens, print-CSS. Without this import
+      // the sheet renders as an unstyled (black) page: fonts transparent,
+      // no @media print rules, no token colors. Bug found in the UI audit.
+      import "/src/styles/index.css";
 
       const h = createElement;
 

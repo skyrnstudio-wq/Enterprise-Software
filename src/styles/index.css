@@ -83,6 +83,16 @@
   /* Locked: immutable / signed record — ink, not a hue (§4.2). */
   --color-status-locked-fg: #43464b;
 
+  /* Ink ramp: text & hairline utilities used across every screen. The paper
+     family's companion — same warm-gray hue as graphite, tuned for type:
+     900 body, 700 secondary, 500 captions, 300 disabled, 200/100 rules. */
+  --color-ink-900: #1a1d21;
+  --color-ink-700: #3a3f45;
+  --color-ink-500: #6b7078;
+  --color-ink-300: #a9adb3;
+  --color-ink-200: #d7d9dc;
+  --color-ink-100: #e6e7e9;
+
   /* Typography */
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -113,6 +123,32 @@
   .measurement {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Layout-shaped loading placeholder (§9 three-state contract). One subtle
+     pulse, token-colored — skeletons look like the content they stand in for,
+     never spinners. Disabled wholesale for vestibular safety (§10). */
+  .skeleton {
+    border-radius: var(--radius-xs);
+    background: var(--color-paper-sunken);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      animation: none;
+      opacity: 0.6;
+    }
   }
 }
 
@@ -305,4 +341,76 @@
 .print-sheet thead th {
   background: #efefed;
   font-weight: 500;
+}
+
+/*
+ * Sunlight Mode — ui-ux-plan §4.4: a high-contrast chrome theme for direct
+ * shop-floor sun. The paper palette stays untouched for office/review work;
+ * the toggle (AppShell) flips `data-sunlight` on <html> and only the chrome
+ * utilities below change. Report sheets always keep print fidelity.
+ */
+html[data-sunlight] body {
+  background: #fdfdfb;
+  color: #111316;
+}
+
+/* Panels go true white with heavier rules so edges survive glare. */
+html[data-sunlight] .sunlight-panel {
+  background: #ffffff;
+  border-color: #4a4e55;
+}
+
+/* Secondary text darkens toward the contrast floor (§4.4: ≥ 4.5:1 outdoors). */
+html[data-sunlight] .sunlight-muted {
+  color: #33373d;
+}
+
+/* The single accent shifts darker for sun-washed primaries. */
+html[data-sunlight] .sunlight-accent {
+  color: #b34700;
+}
+
+/* Sticky data-table header keeps readable under glare. */
+html[data-sunlight] .sunlight-panel thead,
+html[data-sunlight] thead.sunlight-panel {
+  background: #f2f2ef;
+}
+
+/*
+ * KPI strip (§6.2 rule A4 — surface what's due). Plain layout, no cards:
+ * mono figures with caption labels, hairline dividers between figures.
+ */
+.kpi-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--color-ink-200);
+  border-bottom: 1px solid var(--color-ink-200);
+  background: var(--color-paper-raised);
+}
+
+.kpi-strip > * + * {
+  border-left: 1px solid var(--color-ink-200);
+}
+
+.kpi-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+@media (max-width: 640px) {
+  /* Two per row on phones; dividers keep the grid rhythm. */
+  .kpi-strip {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+  }
+  .kpi-strip > *:nth-child(odd) {
+    border-left: none;
+  }
+  .kpi-strip > *:nth-child(n + 3) {
+    border-top: 1px solid var(--color-ink-200);
+  }
 }

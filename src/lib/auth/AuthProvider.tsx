@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../supabase/client";
+import { env } from "../env";
 import { useAuthFactorState } from "./useAuthFactorState";
 import { AuthContext } from "./auth-context";
 import type { AuthState, Profile } from "./auth-types";
@@ -50,7 +51,9 @@ const DEV_PROFILE: Profile = {
 function AuthProviderInner({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [initializing, setInitializing] = useState(false);
+  // True until the first getSession resolves (or dev bypass claims it) —
+  // guards must never see a final "no session" before the check completes.
+  const [initializing, setInitializing] = useState(env.devBypassAuth ? false : true);
   const [timedOut, setTimedOut] = useState(false);
   const { factors, refreshFactors, firstVerifiedFactorId, pendingEnrollmentFactor } =
     useAuthFactorState();
@@ -192,15 +195,20 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     [pendingEnrollmentFactor, refreshFactors],
   );
 
-  const activeUser = session?.user ?? DEV_USER;
-  const activeProfile = profile ?? DEV_PROFILE;
+  // Dev-bypass session claims the DEV identity only when the flag is active;
+  // a real session always wins, so signing out of the bypass shows /login.
+  const activeUser = session?.user ?? (env.devBypassAuth ? DEV_USER : null);
+  const activeProfile = profile ?? (env.devBypassAuth ? DEV_PROFILE : null);
+  // Non-null view: hasRole/signOut consumers only render after the guard
+  // (user !== null implies a profile in bypass or a loaded profile row).
+  const safeProfile = activeProfile ?? DEV_PROFILE;
 
   const hasRole = useCallback(
     (...roles: AppRole[]) => {
-      if (activeProfile.role === "ADMIN") return true;
-      return roles.includes(activeProfile.role);
+      if (safeProfile.role === "ADMIN") return true;
+      return roles.includes(safeProfile.role);
     },
-    [activeProfile],
+    [safeProfile],
   );
 
   const mfaSatisfied = factors.length > 0 || !session;

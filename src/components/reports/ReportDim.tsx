@@ -60,7 +60,10 @@ export function ReportDim({
 }): React.ReactElement {
   const meta = FORMAT_META["ST/QC/02"];
   return (
-    <article className="print-sheet mx-auto max-w-[210mm] bg-white px-[14mm] py-[10mm] shadow-lg print:shadow-none">
+    <article
+      id="print-preview"
+      className="print-sheet mx-auto max-w-[210mm] bg-white px-[14mm] py-[10mm] shadow-lg print:shadow-none"
+    >
       <ReportLetterhead meta={meta} />
       <h1 className="mt-4 text-center text-[12pt] font-semibold uppercase tracking-[0.08em]">
         {sheetTitle(data)}
