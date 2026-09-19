@@ -10,13 +10,6 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const DEMO_PREFILLS = [
-  { label: "Inspector", email: "inspector1@simran.local" },
-  { label: "Quality Head", email: "qh@simran.local" },
-  { label: "Admin", email: "admin@simran.local" },
-  { label: "NACE", email: "nace@simran.local" },
-] as const;
-
 /**
  * Standard S1 Login: simple email and password login without MFA/Authenticator.
  */
@@ -33,11 +26,12 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function handleLogin(targetEmail: string, targetPassword: string): Promise<void> {
+  async function onSubmit(e: React.SyntheticEvent): Promise<void> {
+    e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      const res = await signIn(targetEmail, targetPassword);
+      const res = await signIn(email, password);
       if (res.kind === "error") {
         setError(res.message);
       } else {
@@ -61,8 +55,7 @@ function LoginPage() {
 
           <form
             onSubmit={(e) => {
-              e.preventDefault();
-              void handleLogin(email, password);
+              void onSubmit(e);
             }}
             className="space-y-4"
             noValidate
@@ -98,31 +91,7 @@ function LoginPage() {
               {busy ? "Signing in…" : "Sign in"}
             </Button>
 
-            {/* Quick Demo Logins */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-ink-500 font-medium">Quick Demo Accounts:</span>
-                <span className="text-[11px] text-ink-400 font-mono">pw: Simran#2026</span>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {DEMO_PREFILLS.map((demo) => (
-                  <button
-                    key={demo.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(demo.email);
-                      setPassword("Simran#2026");
-                      void handleLogin(demo.email, "Simran#2026");
-                    }}
-                    className="rounded-xs border border-ink-200 bg-paper-sunken px-2 py-1 text-xs font-medium text-ink-700 hover:bg-paper-raised hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-accent"
-                  >
-                    {demo.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p className="text-sm text-ink-500 pt-2">
+            <p className="text-sm text-ink-500">
               Accounts are issued by the platform administrator.{" "}
               <Link to="/signup" className="font-medium text-accent hover:underline">
                 Need access?
