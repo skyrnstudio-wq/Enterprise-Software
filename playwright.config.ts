@@ -8,6 +8,10 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // illustrate.spec.ts is a one-off doc-illustration capture, run explicitly
+  // via pw-illustrate.config.ts:
+  //   npx playwright test --config=pw-illustrate.config.ts --project=chromium
+  testIgnore: /illustrate[2]?\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !process.env.CI,
   retries: process.env.CI ? 2 : 0,

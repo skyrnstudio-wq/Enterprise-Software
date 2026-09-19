@@ -17,10 +17,12 @@ describe("FORMAT_META — controlled format blocks", () => {
   });
 
   it("matches the ST/QC/04 Rev 01 block (no audited issue date — P-06)", () => {
+    // The source workbook has no date of release, so the block prints
+    // "Not stated" — mirrors the original instead of inventing a date.
     expect(FORMAT_META["ST/QC/04"]).toEqual({
       format: "ST/QC/04",
       rev: "Rev 01",
-      issueDate: "—",
+      issueDate: "Not stated",
       governedBy: "ISO 12944 / 8501 · NACE",
     });
   });

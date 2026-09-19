@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { db } from "@/lib/dexie/db";
+import { createDebouncedWriter, createTabChannel } from "./draft-persist";
 import type { DimensionDraft } from "@/lib/dexie/db";
 
 /**
@@ -20,6 +21,8 @@ export interface InspectionState {
   hydrated: boolean;
   /** Timestamp (ms, caller clock) of the last COMPLETED Dexie write. */
   lastWriteAt: number | null;
+  /** Timestamp of the newest mutation (drives the "saving…" indicator, G6). */
+  mutatedAt: number | null;
   /** Another tab claimed this draft (edge 3.12) — grid renders read-only. */
   stolenByOtherTab: boolean;
   cursor: { row: number; sample: number } | null;
@@ -28,69 +31,53 @@ export interface InspectionState {
   load: (draft: DimensionDraft) => void;
   setSample: (row: number, sample: number, value: number | null) => void;
   setInstrument: (row: number, instrumentId: string | null) => void;
+  /** DIM-06 bulk apply: set one instrument on every unlocked row. */
+  applyInstrumentToAll: (instrumentId: string | null) => void;
   setCursor: (row: number, sample: number) => void;
   /** Another tab announced ownership of this batch — go read-only. */
   claimConflict: () => void;
   purge: (batchId: string) => Promise<void>;
 }
 
-/** Timer handle per live draft — module scope so writes debounce across calls. */
-const pendingWrites = new Map<string, ReturnType<typeof setTimeout>>();
+const writer = createDebouncedWriter<DimensionDraft>((draft) => db.drafts.put(draft));
 
-/**
- * Debounce window. Overridable for tests — fake-indexeddb drives IDB
- * transactions off the macrotask queue, which frozen fake timers would
- * deadlock; tests run real timers with a near-zero window instead.
- */
-let writeThrottleMs = 300;
+/** Debounce window override for tests (see draft-persist for the why). */
 export function setWriteThrottleForTests(ms: number): void {
-  writeThrottleMs = ms;
-}
-
-function scheduleWrite(
-  batchId: string,
-  getDraft: () => DimensionDraft | null,
-  onDone: () => void,
-): void {
-  const existing = pendingWrites.get(batchId);
-  if (existing !== undefined) clearTimeout(existing);
-  pendingWrites.set(
-    batchId,
-    setTimeout(() => {
-      pendingWrites.delete(batchId);
-      const draft = getDraft();
-      if (draft === null) return;
-      void db.drafts
-        .put({ ...draft, savedAt: new Date().toISOString() })
-        .then(onDone)
-        .catch(() => {
-          // Edge 3.11: a failed write is retried on the next mutation; the
-          // completed-write timestamp does not advance on failure.
-        });
-    }, writeThrottleMs),
-  );
+  writer.setThrottleMs(ms);
 }
 
 /** Tab-guard channel — null in environments without BroadcastChannel (tests). */
-const tabChannel: BroadcastChannel | null =
-  typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("simran-qc-drafts") : null;
+const tabChannel = createTabChannel("simran-qc-drafts");
 
 export const useInspectionStore = create<InspectionState>()((set, get) => ({
   draft: null,
   hydrated: false,
   lastWriteAt: null,
+  mutatedAt: null,
   stolenByOtherTab: false,
   cursor: null,
 
   hydrate: async (batchId) => {
-    const existing = await db.drafts.get(batchId);
+    // Dexie yields `undefined` for a miss; normalise once so the guards below
+    // read as plain null checks.
+    const existing = (await db.drafts.get(batchId)) ?? null;
+    const current = get().draft;
+    // A draft already open for THIS batch wins. The route effect is
+    // double-invoked under StrictMode, so the second pass must not blank a
+    // working set that the first pass just loaded — otherwise an offline
+    // header re-fetch (which returns null on any network error) turns a live
+    // draft into a spurious "Batch not found".
+    if (existing === null && current !== null && current.batchId === batchId) {
+      set({ hydrated: true });
+      return current;
+    }
     set({
-      draft: existing ?? null,
+      draft: existing,
       hydrated: true,
       cursor: existing?.cursor ?? null,
       stolenByOtherTab: false,
     });
-    return existing ?? null;
+    return existing;
   },
 
   load: (draft) => {
@@ -105,8 +92,8 @@ export const useInspectionStore = create<InspectionState>()((set, get) => ({
       i === row ? { ...r, samples: r.samples.map((s, j) => (j === sample ? value : s)) } : r,
     );
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, rows } });
-    scheduleWrite(
+    set({ draft: { ...state.draft, rows }, mutatedAt: Date.now() });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -122,8 +109,23 @@ export const useInspectionStore = create<InspectionState>()((set, get) => ({
       i === row ? { ...r, instrument_id: instrumentId } : r,
     );
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, rows } });
-    scheduleWrite(
+    set({ draft: { ...state.draft, rows }, mutatedAt: Date.now() });
+    writer.schedule(
+      batchId,
+      () => get().draft,
+      () => {
+        set({ lastWriteAt: Date.now() });
+      },
+    );
+  },
+
+  applyInstrumentToAll: (instrumentId) => {
+    const state = get();
+    if (state.draft === null || state.stolenByOtherTab) return;
+    const rows = state.draft.rows.map((r) => ({ ...r, instrument_id: instrumentId }));
+    const batchId = state.draft.batchId;
+    set({ draft: { ...state.draft, rows }, mutatedAt: Date.now() });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -136,8 +138,12 @@ export const useInspectionStore = create<InspectionState>()((set, get) => ({
     const state = get();
     if (state.draft === null) return;
     const batchId = state.draft.batchId;
-    set({ cursor: { row, sample }, draft: { ...state.draft, cursor: { row, sample } } });
-    scheduleWrite(
+    set({
+      cursor: { row, sample },
+      draft: { ...state.draft, cursor: { row, sample } },
+      mutatedAt: Date.now(),
+    });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -151,13 +157,9 @@ export const useInspectionStore = create<InspectionState>()((set, get) => ({
   },
 
   purge: async (batchId) => {
-    const existing = pendingWrites.get(batchId);
-    if (existing !== undefined) {
-      clearTimeout(existing);
-      pendingWrites.delete(batchId);
-    }
+    writer.clearPending(batchId);
     await db.drafts.delete(batchId);
-    set({ draft: null, cursor: null, hydrated: false, lastWriteAt: null });
+    set({ draft: null, cursor: null, hydrated: false, lastWriteAt: null, mutatedAt: null });
   },
 }));
 

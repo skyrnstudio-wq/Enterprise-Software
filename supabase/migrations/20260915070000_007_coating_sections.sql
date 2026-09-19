@@ -25,6 +25,9 @@ create table public.batch_coating (
   blast_method               text not null default 'Abrasive Blast Cleaning',
   blast_grade                text not null default 'Sa 2.5',
   grit_size                  text not null default 'G-40',
+  -- ISO 8501-3 comparator assessment (Fine / Medium / Coarse); the wizard
+  -- requires it answered before Section A continues (COAT-02).
+  comparator_grade           text check (comparator_grade in ('fine', 'medium', 'coarse')),
   -- Comparator-G Medium profile; 45–75 µm working band (COAT-02).
   profile_um                 numeric(5, 1) check (profile_um >= 0 and profile_um <= 2000),
   -- Edge 4.12: the profile gauge is a per-batch instrument assignment

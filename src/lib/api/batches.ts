@@ -69,7 +69,7 @@ export async function submitBatch(draft: DimensionDraft): Promise<SubmitResult> 
     await syncDraftContents(draft);
     const { error } = await supabase.rpc("submit_batch", {
       p_batch_id: batchId,
-      p_payload: { client: "dimensional-grid", saved_at: draft.savedAt },
+      p_client_stats: { client: "dimensional-grid", saved_at: draft.savedAt },
     });
     if (error !== null) return { kind: "blocked", message: error.message };
     await db.drafts.delete(batchId);
@@ -93,8 +93,12 @@ async function syncDraftContents(draft: DimensionDraft): Promise<void> {
         instrument_id: r.instrument_id,
       })),
   );
+  // Migration 005's signature: upsert_batch_draft(p_batch, p_readings,
+  // p_coat_logs, p_dft_readings). p_batch MUST carry the batch id — the
+  // function derives the target row from `p_batch ->> 'id'` and raises
+  // BT_VALID without it.
   const { error } = await supabase.rpc("upsert_batch_draft", {
-    p_header: draft.header as unknown as Json,
+    p_batch: { id: draft.batchId, ...draft.header } as unknown as Json,
     p_readings: readings as unknown as Json,
     p_coat_logs: [] as unknown as Json,
     p_dft_readings: [] as unknown as Json,
@@ -160,7 +164,7 @@ export async function replaySubmission(payload: { draft: DimensionDraft }): Prom
   await syncDraftContents(payload.draft);
   const { error } = await supabase.rpc("submit_batch", {
     p_batch_id: payload.draft.batchId,
-    p_payload: { client: "dimensional-grid", saved_at: payload.draft.savedAt, replayed: true },
+    p_client_stats: { client: "dimensional-grid", saved_at: payload.draft.savedAt, replayed: true },
   });
   if (error !== null) throw error;
   await db.drafts.delete(payload.draft.batchId);
@@ -191,7 +195,7 @@ export async function listDimensionRows(revisionId: string): Promise<DimensionRo
 }
 
 /** Batch header for the grid screen's draft bootstrap. */
-export async function getBatchHeader(batchId: string): Promise<{
+export interface BatchHeader {
   id: string;
   item_id: string;
   revision_id: string;
@@ -201,7 +205,20 @@ export async function getBatchHeader(batchId: string): Promise<{
   lot_qty: number;
   status: string;
   item_code: string;
-} | null> {
+}
+
+/**
+ * Batch header lookup that keeps "no such batch" and "could not ask"
+ * distinct. The distinction is load-bearing: a transport failure must never be
+ * reported to the operator as "Batch not found", or an offline refresh reads
+ * as a deleted/approved batch and the draft in front of them looks lost.
+ */
+export type BatchHeaderProbe =
+  | { kind: "ok"; header: BatchHeader }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+export async function probeBatchHeader(batchId: string): Promise<BatchHeaderProbe> {
   const { data, error } = await supabase
     .from("batches")
     .select(
@@ -209,19 +226,32 @@ export async function getBatchHeader(batchId: string): Promise<{
     )
     .eq("id", batchId)
     .single();
-  if (error) return null;
+  if (error !== null) {
+    // PGRST116 = "JSON object requested, multiple (or no) rows returned" — the
+    // only answer that genuinely means the batch is not there.
+    return error.code === "PGRST116" ? { kind: "missing" } : { kind: "unreachable" };
+  }
   const row = data as unknown as Record<string, unknown>;
   return {
-    id: row.id as string,
-    item_id: row.item_id as string,
-    revision_id: row.revision_id as string,
-    po_number: row.po_number as string,
-    delivery_batch_code: row.delivery_batch_code as string,
-    inspection_date: row.inspection_date as string,
-    lot_qty: row.lot_qty as number,
-    status: row.status as string,
-    item_code: (row.items as { item_code: string } | null)?.item_code ?? "—",
+    kind: "ok",
+    header: {
+      id: row.id as string,
+      item_id: row.item_id as string,
+      revision_id: row.revision_id as string,
+      po_number: row.po_number as string,
+      delivery_batch_code: row.delivery_batch_code as string,
+      inspection_date: row.inspection_date as string,
+      lot_qty: row.lot_qty as number,
+      status: row.status as string,
+      item_code: (row.items as { item_code: string } | null)?.item_code ?? "—",
+    },
   };
+}
+
+/** Header lookup for callers that only care whether the batch is usable. */
+export async function getBatchHeader(batchId: string): Promise<BatchHeader | null> {
+  const probe = await probeBatchHeader(batchId);
+  return probe.kind === "ok" ? probe.header : null;
 }
 
 /** Revision metadata for the new-batch flow. */

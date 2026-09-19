@@ -79,6 +79,7 @@ export async function createCoatingBatch(input: CreateCoatingBatchInput): Promis
     blast_method: "Abrasive Blast Cleaning",
     blast_grade: "Sa 2.5",
     grit_size: "G-40",
+    comparator_grade: null,
     profile_um: null,
     profile_gauge_instrument_id: null,
   });
@@ -109,10 +110,10 @@ export function normalizeCoatingDraft(raw: CoatingDraft): CoatingDraft {
       blastMethod: surface?.blastMethod ?? "Abrasive Blast Cleaning",
       blastGrade: surface?.blastGrade ?? "Sa 2.5",
       gritSize: surface?.gritSize ?? "G-40",
+      comparatorGrade: surface?.comparatorGrade ?? null,
       weldEdgeOk: surface?.weldEdgeOk ?? false,
       solventCleanOk: surface?.solventCleanOk ?? false,
       waterBreakPass: surface?.waterBreakPass ?? false,
-      comparatorGrade: surface?.comparatorGrade ?? null,
       profileUm: surface?.profileUm ?? null,
       gaugeInstrumentId: surface?.gaugeInstrumentId ?? null,
     },
@@ -201,8 +202,10 @@ export function dftBreachCounts(
 }
 
 async function syncCoatingContents(draft: CoatingDraft): Promise<void> {
+  // Same signature as the dimensional sync (migration 005): p_batch carries
+  // the batch id — see the note in batches.ts.
   const { error } = await supabase.rpc("upsert_batch_draft", {
-    p_header: draft.header as unknown as Json,
+    p_batch: { id: draft.batchId, ...draft.header } as unknown as Json,
     p_readings: [] as unknown as Json,
     p_coat_logs: coatLogPayload(draft) as unknown as Json,
     p_dft_readings: dftPayload(draft) as unknown as Json,
@@ -227,6 +230,7 @@ async function syncSectionA(draft: CoatingDraft): Promise<void> {
       blast_method: a.blastMethod,
       blast_grade: a.blastGrade,
       grit_size: a.gritSize,
+      comparator_grade: a.comparatorGrade,
       profile_um: a.profileUm,
       profile_gauge_instrument_id: a.gaugeInstrumentId,
       updated_at: new Date().toISOString(),
@@ -280,7 +284,7 @@ export async function submitCoatingBatch(
     await syncSectionE(draft);
     const { error } = await supabase.rpc("submit_batch", {
       p_batch_id: batchId,
-      p_payload: {
+      p_client_stats: {
         client: "coating-wizard",
         saved_at: draft.savedAt,
         client_stats: {
@@ -307,7 +311,7 @@ export async function replayCoatingSubmission(payload: {
   await syncSectionE(payload.draft);
   const { error } = await supabase.rpc("submit_batch", {
     p_batch_id: payload.draft.batchId,
-    p_payload: {
+    p_client_stats: {
       client: "coating-wizard",
       saved_at: payload.draft.savedAt,
       replayed: true,

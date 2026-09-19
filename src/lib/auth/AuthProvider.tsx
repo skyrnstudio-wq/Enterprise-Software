@@ -151,6 +151,19 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     [firstVerifiedFactorId],
   );
 
+  const signUp = useCallback<AuthState["signUp"]>(async (email, password, fullName) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      // The profile trigger reads full_name from user metadata (migration 006).
+      options: { data: { full_name: fullName } },
+    });
+    if (error) return { kind: "error", message: error.message };
+    // A live session means the project does not require email confirmation.
+    // Otherwise the account exists but waits on the confirmation link.
+    return data.session ? { kind: "signed-in" } : { kind: "confirm-email" };
+  }, []);
+
   const verifyMfa = useCallback<AuthState["verifyMfa"]>(async (factorId, code) => {
     const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
       factorId,
@@ -224,6 +237,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       initializing,
       timedOut,
       signIn,
+      signUp,
       verifyMfa,
       enrollMfa,
       confirmMfaEnrollment,
@@ -237,6 +251,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       initializing,
       timedOut,
       signIn,
+      signUp,
       verifyMfa,
       enrollMfa,
       confirmMfaEnrollment,

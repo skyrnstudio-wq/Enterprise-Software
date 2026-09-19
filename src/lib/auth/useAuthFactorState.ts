@@ -18,7 +18,9 @@ interface FactorRow {
 }
 
 interface FactorListResult {
-  data: { totp: FactorRow[]; error: { message: string } | null };
+  data: { totp: FactorRow[] };
+  /** supabase-js v2 returns errors at the TOP level, not inside `data`. */
+  error: { message: string } | null;
 }
 
 export interface FactorInfo {
@@ -36,14 +38,17 @@ export function useAuthFactorState() {
   /** Only VERIFIED factors count — enrollment alone does not satisfy SO-01…04. */
   const refreshFactors = useCallback(async () => {
     const result = (await supabase.auth.mfa.listFactors()) as unknown as FactorListResult;
-    if (result.data.error !== null) return;
+    // Error lives at the top level in supabase-js v2 — the previous
+    // `result.data.error` check read `undefined !== null` (always true) and
+    // silently zeroed every factor list, bricking the MFA login challenge.
+    if (result.error !== null) return;
     setFactors(result.data.totp.filter((f) => f.status === "verified").map(toInfo));
   }, []);
 
   /** First verified TOTP factor, or null — used for the login challenge step. */
   const firstVerifiedFactorId = useCallback(async (): Promise<string | null> => {
     const result = (await supabase.auth.mfa.listFactors()) as unknown as FactorListResult;
-    if (result.data.error !== null) return null;
+    if (result.error !== null) return null;
     const verified = result.data.totp.filter((f) => f.status === "verified");
     return verified[0]?.id ?? null;
   }, []);
@@ -51,7 +56,7 @@ export function useAuthFactorState() {
   /** Pending (unverified) enrollment, if any — completes the enroll-then-confirm flow. */
   const pendingEnrollmentFactor = useCallback(async (): Promise<FactorInfo | null> => {
     const result = (await supabase.auth.mfa.listFactors()) as unknown as FactorListResult;
-    if (result.data.error !== null) return null;
+    if (result.error !== null) return null;
     const pending = result.data.totp.filter((f) => f.status === "unverified");
     return pending[0] !== undefined ? toInfo(pending[0]) : null;
   }, []);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { env } from "@/lib/env";
@@ -34,6 +34,15 @@ function LoginPage() {
   const [totp, setTotp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set only once auth has FULLY succeeded (past any TOTP step) — the login
+  // screen owns this redirect so an MFA user is never bounced to the shell
+  // mid-challenge. Guard on a local flag, not `user`, because the session is
+  // established at aal1 before the TOTP challenge completes.
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    if (signedIn) void navigate({ to: "/" });
+  }, [signedIn, navigate]);
 
   async function onSubmit(e: React.SyntheticEvent): Promise<void> {
     e.preventDefault();
@@ -43,12 +52,15 @@ function LoginPage() {
       if (factorId) {
         const res = await verifyMfa(factorId, totp);
         if (res.kind === "error") setError(res.message);
-        else setFactorId(null); // signed-in render branch takes over
+        else {
+          setFactorId(null);
+          setSignedIn(true);
+        }
       } else {
         const res = await signIn(email, password);
         if (res.kind === "error") setError(res.message);
         else if (res.kind === "mfa-required") setFactorId(res.factorId);
-        // signed-in: the session event flips `user`; render branch routes.
+        else setSignedIn(true);
       }
     } finally {
       setBusy(false);
@@ -134,6 +146,14 @@ function LoginPage() {
               ) : null
             ) : null}
             {controls}
+            {factorId === null ? (
+              <p className="text-sm text-ink-500">
+                Accounts are issued by the platform administrator.{" "}
+                <Link to="/signup" className="font-medium text-accent hover:underline">
+                  Need access?
+                </Link>
+              </p>
+            ) : null}
           </form>
         </div>
       </div>

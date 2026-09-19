@@ -1,6 +1,7 @@
 # Supabase CLI project config — technology-stack.md §3.7.
-# Local stack (supabase start) requires Docker; CI applies migrations with
-# `supabase db push` against staging (see supabase/README.md).
+# The local Docker stack was removed; the hosted project (linked) is the single
+# backend. This file still drives migration metadata + the TOTP/auth settings
+# replicated there, and `npm run db:migrate` pushes to the linked project.
 project_id = "simran-qc-platform"
 
 [api]
@@ -27,6 +28,13 @@ enable_signup = true
 # MFA (TOTP) enforcement for QUALITY_HEAD + ADMIN lands in Phase 2
 # (execution-plan.md step 2.2); max_enrolled_factors is the first knob.
 max_enrolled_factors = 10
+
+# TOTP enroll/verify default to false on the local stack — without these the
+# login challenge and the enrollment dialog both fail with "MFA verification
+# is disabled for TOTP", and the QH can never reach an AAL2 session (SO-01…04).
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
 
 [realtime]
 enabled = true

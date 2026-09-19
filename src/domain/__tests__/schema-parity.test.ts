@@ -30,13 +30,13 @@ const migration = (name: string): string =>
 const migrationExact = (name: string): string =>
   readFileSync(path.join(MIGRATIONS_DIR, name), "utf8").replace(/\s+/g, " ");
 
-const m001 = migration("20260915_001_core_schema.sql");
-const m002 = migration("20260915_002_constraints.sql");
-const m003 = migration("20260915_003_triggers.sql");
-const m004 = migration("20260915_004_rls.sql");
-const m005 = migration("20260915_005_rpcs.sql");
-const m005Exact = migrationExact("20260915_005_rpcs.sql");
-const m007 = migration("20260915_007_coating_sections.sql");
+const m001 = migration("20260915010000_001_core_schema.sql");
+const m002 = migration("20260915020000_002_constraints.sql");
+const m003 = migration("20260915030000_003_triggers.sql");
+const m004 = migration("20260915040000_004_rls.sql");
+const m005 = migration("20260915050000_005_rpcs.sql");
+const m005Exact = migrationExact("20260915050000_005_rpcs.sql");
+const m007 = migration("20260915070000_007_coating_sections.sql");
 
 /** Every §2.1 entity (backend-architecture.md). */
 const TABLES = [

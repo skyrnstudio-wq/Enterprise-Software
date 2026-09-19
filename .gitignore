@@ -33,6 +33,7 @@ admin_cleanup.ps1
 
 # Supabase CLI transient state
 supabase/.temp/
+supabase/.branches/
 
 # TypeScript incremental
 *.tsbuildinfo

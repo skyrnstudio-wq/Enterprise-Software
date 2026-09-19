@@ -24,10 +24,10 @@ Plus: append-only `audit_log` (no UPDATE grant), per-role RLS policies.
 ## Migrations
 
 `migrations/` — committed SQL migrations, applied via `supabase db push`.
-Phase 1 (data layer) is on disk: `20260915_001_core_schema.sql` (§2.1 tables),
-`20260915_002_constraints.sql` (§2.2 CHECKs/UNIQUEs), `20260915_003_triggers.sql`
-(§3 immutability + state machine + audit), `20260915_004_rls.sql` (§4 policies),
-`20260915_005_rpcs.sql` (§5 `submit_batch` / `decide_batch` / `upsert_batch_draft`).
+Phase 1 (data layer) is on disk: `20260915010000_001_core_schema.sql` (§2.1 tables),
+`20260915020000_002_constraints.sql` (§2.2 CHECKs/UNIQUEs), `20260915030000_003_triggers.sql`
+(§3 immutability + state machine + audit), `20260915040000_004_rls.sql` (§4 policies),
+`20260915050000_005_rpcs.sql` (§5 `submit_batch` / `decide_batch` / `upsert_batch_draft`).
 `seed.sql` provisions the fixture item + revision + 53 dimension rows + coating
 spec + instruments.
 

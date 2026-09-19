@@ -22,7 +22,6 @@ function makeDraft(overrides: Partial<CoatingDraft> = {}): CoatingDraft {
       inspection_date: "2026-09-16",
       lot_quantity: 25,
     },
-    fxGrade: "C3",
     surfacePrep: {
       steelGrade: "MS Sheet Fabrication",
       blastMethod: "Abrasive Blast Cleaning",

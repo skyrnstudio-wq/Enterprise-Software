@@ -195,6 +195,8 @@ export interface CoatingChecklistInput {
   /** Edge 4.11: operator acknowledgment for submitting on a partial grid. */
   partialDftAcknowledged: boolean;
   visualChecksComplete: boolean;
+  /** COAT-04 / edge 4.14: any coat's Part A is past shelf-life — hard block. */
+  shelfLifeBlocked?: boolean;
 }
 
 export interface CoatingChecklistItem {
@@ -252,6 +254,16 @@ export function coatingSubmissionChecklist(input: CoatingChecklistInput): Coatin
       done: input.coatsComplete,
       kind: "gate",
     },
+    ...(input.shelfLifeBlocked === true
+      ? [
+          {
+            id: "shelf-life",
+            label: "✕ Shelf life expired for at least one coat — replace the material (COAT-04)",
+            done: false,
+            kind: "gate" as const,
+          },
+        ]
+      : []),
     {
       id: "dft-inside",
       label: `Inside grid: ≥ 5 readings for an ISO 19840 verdict (${String(inside)}/26)`,

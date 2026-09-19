@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedNcrRouteImport } from './routes/_authenticated/ncr'
 import { Route as AuthenticatedAdminInstrumentsRouteImport } from './routes/_authenticated/admin/instruments'
 import { Route as AuthenticatedAdminItemsRouteImport } from './routes/_authenticated/admin/items'
 import { Route as AuthenticatedBatchBatchIdRouteImport } from './routes/_authenticated/batch/$batchId'
@@ -21,6 +23,8 @@ import { Route as AuthenticatedCoatingNewRouteImport } from './routes/_authentic
 import { Route as AuthenticatedReportsBatchIdRouteImport } from './routes/_authenticated/reports/$batchId'
 import { Route as AuthenticatedReviewIndexRouteImport } from './routes/_authenticated/review/index'
 import { Route as AuthenticatedReviewBatchIdRouteImport } from './routes/_authenticated/review/$batchId'
+import { Route as AuthenticatedAdminItemsItemIdRouteImport } from './routes/_authenticated/admin/items/$itemId'
+import { Route as AuthenticatedAdminItemsNewRouteImport } from './routes/_authenticated/admin/items/new'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -31,9 +35,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedNcrRoute = AuthenticatedNcrRouteImport.update({
+  id: '/ncr',
+  path: '/ncr',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAdminInstrumentsRoute =
@@ -87,12 +101,26 @@ const AuthenticatedReviewBatchIdRoute =
     path: '/review/$batchId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminItemsItemIdRoute =
+  AuthenticatedAdminItemsItemIdRouteImport.update({
+    id: '/$itemId',
+    path: '/$itemId',
+    getParentRoute: () => AuthenticatedAdminItemsRoute,
+  } as any)
+const AuthenticatedAdminItemsNewRoute =
+  AuthenticatedAdminItemsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdminItemsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/ncr': typeof AuthenticatedNcrRoute
   '/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
-  '/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/admin/items': typeof AuthenticatedAdminItemsRouteWithChildren
   '/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
   '/batch/new': typeof AuthenticatedBatchNewRoute
   '/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
@@ -100,12 +128,16 @@ export interface FileRoutesByFullPath {
   '/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
   '/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
   '/review/': typeof AuthenticatedReviewIndexRoute
+  '/admin/items/$itemId': typeof AuthenticatedAdminItemsItemIdRoute
+  '/admin/items/new': typeof AuthenticatedAdminItemsNewRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/ncr': typeof AuthenticatedNcrRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
-  '/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/admin/items': typeof AuthenticatedAdminItemsRouteWithChildren
   '/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
   '/batch/new': typeof AuthenticatedBatchNewRoute
   '/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
@@ -113,14 +145,18 @@ export interface FileRoutesByTo {
   '/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
   '/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
   '/review': typeof AuthenticatedReviewIndexRoute
+  '/admin/items/$itemId': typeof AuthenticatedAdminItemsItemIdRoute
+  '/admin/items/new': typeof AuthenticatedAdminItemsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_authenticated/ncr': typeof AuthenticatedNcrRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/instruments': typeof AuthenticatedAdminInstrumentsRoute
-  '/_authenticated/admin/items': typeof AuthenticatedAdminItemsRoute
+  '/_authenticated/admin/items': typeof AuthenticatedAdminItemsRouteWithChildren
   '/_authenticated/batch/$batchId': typeof AuthenticatedBatchBatchIdRoute
   '/_authenticated/batch/new': typeof AuthenticatedBatchNewRoute
   '/_authenticated/coating/$batchId': typeof AuthenticatedCoatingBatchIdRoute
@@ -128,12 +164,16 @@ export interface FileRoutesById {
   '/_authenticated/reports/$batchId': typeof AuthenticatedReportsBatchIdRoute
   '/_authenticated/review/$batchId': typeof AuthenticatedReviewBatchIdRoute
   '/_authenticated/review/': typeof AuthenticatedReviewIndexRoute
+  '/_authenticated/admin/items/$itemId': typeof AuthenticatedAdminItemsItemIdRoute
+  '/_authenticated/admin/items/new': typeof AuthenticatedAdminItemsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/signup'
+    | '/ncr'
     | '/admin/instruments'
     | '/admin/items'
     | '/batch/$batchId'
@@ -143,9 +183,13 @@ export interface FileRouteTypes {
     | '/reports/$batchId'
     | '/review/$batchId'
     | '/review/'
+    | '/admin/items/$itemId'
+    | '/admin/items/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/signup'
+    | '/ncr'
     | '/'
     | '/admin/instruments'
     | '/admin/items'
@@ -156,10 +200,14 @@ export interface FileRouteTypes {
     | '/reports/$batchId'
     | '/review/$batchId'
     | '/review'
+    | '/admin/items/$itemId'
+    | '/admin/items/new'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/signup'
+    | '/_authenticated/ncr'
     | '/_authenticated/'
     | '/_authenticated/admin/instruments'
     | '/_authenticated/admin/items'
@@ -170,11 +218,14 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/$batchId'
     | '/_authenticated/review/$batchId'
     | '/_authenticated/review/'
+    | '/_authenticated/admin/items/$itemId'
+    | '/_authenticated/admin/items/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,11 +244,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ncr': {
+      id: '/_authenticated/ncr'
+      path: '/ncr'
+      fullPath: '/ncr'
+      preLoaderRoute: typeof AuthenticatedNcrRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/instruments': {
@@ -263,13 +328,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReviewBatchIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/items/$itemId': {
+      id: '/_authenticated/admin/items/$itemId'
+      path: '/$itemId'
+      fullPath: '/admin/items/$itemId'
+      preLoaderRoute: typeof AuthenticatedAdminItemsItemIdRouteImport
+      parentRoute: typeof AuthenticatedAdminItemsRoute
+    }
+    '/_authenticated/admin/items/new': {
+      id: '/_authenticated/admin/items/new'
+      path: '/new'
+      fullPath: '/admin/items/new'
+      preLoaderRoute: typeof AuthenticatedAdminItemsNewRouteImport
+      parentRoute: typeof AuthenticatedAdminItemsRoute
+    }
   }
 }
 
+interface AuthenticatedAdminItemsRouteChildren {
+  AuthenticatedAdminItemsItemIdRoute: typeof AuthenticatedAdminItemsItemIdRoute
+  AuthenticatedAdminItemsNewRoute: typeof AuthenticatedAdminItemsNewRoute
+}
+
+const AuthenticatedAdminItemsRouteChildren: AuthenticatedAdminItemsRouteChildren =
+  {
+    AuthenticatedAdminItemsItemIdRoute: AuthenticatedAdminItemsItemIdRoute,
+    AuthenticatedAdminItemsNewRoute: AuthenticatedAdminItemsNewRoute,
+  }
+
+const AuthenticatedAdminItemsRouteWithChildren =
+  AuthenticatedAdminItemsRoute._addFileChildren(
+    AuthenticatedAdminItemsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedNcrRoute: typeof AuthenticatedNcrRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminInstrumentsRoute: typeof AuthenticatedAdminInstrumentsRoute
-  AuthenticatedAdminItemsRoute: typeof AuthenticatedAdminItemsRoute
+  AuthenticatedAdminItemsRoute: typeof AuthenticatedAdminItemsRouteWithChildren
   AuthenticatedBatchBatchIdRoute: typeof AuthenticatedBatchBatchIdRoute
   AuthenticatedBatchNewRoute: typeof AuthenticatedBatchNewRoute
   AuthenticatedCoatingBatchIdRoute: typeof AuthenticatedCoatingBatchIdRoute
@@ -280,9 +376,10 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedNcrRoute: AuthenticatedNcrRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminInstrumentsRoute: AuthenticatedAdminInstrumentsRoute,
-  AuthenticatedAdminItemsRoute: AuthenticatedAdminItemsRoute,
+  AuthenticatedAdminItemsRoute: AuthenticatedAdminItemsRouteWithChildren,
   AuthenticatedBatchBatchIdRoute: AuthenticatedBatchBatchIdRoute,
   AuthenticatedBatchNewRoute: AuthenticatedBatchNewRoute,
   AuthenticatedCoatingBatchIdRoute: AuthenticatedCoatingBatchIdRoute,
@@ -299,6 +396,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

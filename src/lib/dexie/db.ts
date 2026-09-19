@@ -76,8 +76,6 @@ export interface CoatingDraft {
     inspection_date: string;
     lot_quantity: number;
   };
-  /** ƒx grade inherited from the item revision (PRD COAT-01). */
-  fxGrade: string;
   /** Section A — surface prep: presets (defaults per PRD) + profile + gauge. */
   surfacePrep: {
     steelGrade: string;

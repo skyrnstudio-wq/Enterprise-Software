@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { db } from "@/lib/dexie/db";
+import { createDebouncedWriter, createTabChannel } from "./draft-persist";
 import type { CoatingDraft, VisualCheckState, VisualCheckValue } from "@/lib/dexie/db";
 
 /**
@@ -16,6 +17,8 @@ export interface CoatingState {
   hydrated: boolean;
   /** Timestamp (ms, caller clock) of the last COMPLETED Dexie write. */
   lastWriteAt: number | null;
+  /** Timestamp of the newest mutation (drives the "saving…" indicator, G6). */
+  mutatedAt: number | null;
   /** Another tab claimed this draft — wizard renders read-only. */
   stolenByOtherTab: boolean;
 
@@ -37,58 +40,40 @@ export interface CoatingState {
   purge: (batchId: string) => Promise<void>;
 }
 
-const pendingWrites = new Map<string, ReturnType<typeof setTimeout>>();
+const writer = createDebouncedWriter<CoatingDraft>((draft) => db.coatingDrafts.put(draft));
 
-/**
- * Debounce window, overridable for tests (fake-indexeddb drives IDB
- * transactions off the macrotask queue — frozen fake timers deadlock it).
- */
-let writeThrottleMs = 300;
+/** Debounce window override for tests (see draft-persist for the why). */
 export function setCoatingWriteThrottleForTests(ms: number): void {
-  writeThrottleMs = ms;
+  writer.setThrottleMs(ms);
 }
 
-function scheduleWrite(
-  batchId: string,
-  getDraft: () => CoatingDraft | null,
-  onDone: () => void,
-): void {
-  const existing = pendingWrites.get(batchId);
-  if (existing !== undefined) clearTimeout(existing);
-  pendingWrites.set(
-    batchId,
-    setTimeout(() => {
-      pendingWrites.delete(batchId);
-      const draft = getDraft();
-      if (draft === null) return;
-      void db.coatingDrafts
-        .put({ ...draft, savedAt: new Date().toISOString() })
-        .then(onDone)
-        .catch(() => {
-          // Edge 3.11: a failed write is retried on the next mutation; the
-          // completed-write timestamp does not advance on failure.
-        });
-    }, writeThrottleMs),
-  );
-}
-
-const tabChannel: BroadcastChannel | null =
-  typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("simran-qc-coating") : null;
+const tabChannel = createTabChannel("simran-qc-coating");
 
 export const useCoatingStore = create<CoatingState>()((set, get) => ({
   draft: null,
   hydrated: false,
   lastWriteAt: null,
+  mutatedAt: null,
   stolenByOtherTab: false,
 
   hydrate: async (batchId) => {
-    const existing = await db.coatingDrafts.get(batchId);
+    // Dexie yields `undefined` for a miss; normalise once so the guards below
+    // read as plain null checks.
+    const existing = (await db.coatingDrafts.get(batchId)) ?? null;
+    const current = get().draft;
+    // Mirror of the inspection store: a draft already open for THIS batch
+    // wins, so a double-invoked effect (StrictMode) can never blank a live
+    // working set and collapse the page into "Batch not found".
+    if (existing === null && current !== null && current.batchId === batchId) {
+      set({ hydrated: true });
+      return current;
+    }
     set({
-      draft: existing ?? null,
+      draft: existing,
       hydrated: true,
       stolenByOtherTab: false,
     });
-    return existing ?? null;
+    return existing;
   },
 
   load: (draft) => {
@@ -100,8 +85,11 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     const state = get();
     if (state.draft === null || state.stolenByOtherTab) return;
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, surfacePrep: { ...state.draft.surfacePrep, ...section } } });
-    scheduleWrite(
+    set({
+      draft: { ...state.draft, surfacePrep: { ...state.draft.surfacePrep, ...section } },
+      mutatedAt: Date.now(),
+    });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -114,8 +102,11 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     const state = get();
     if (state.draft === null || state.stolenByOtherTab) return;
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, conditions: { ...state.draft.conditions, ...section } } });
-    scheduleWrite(
+    set({
+      draft: { ...state.draft, conditions: { ...state.draft.conditions, ...section } },
+      mutatedAt: Date.now(),
+    });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -133,8 +124,8 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     else coats.push(coat);
     coats.sort((a, b) => a.coatNo - b.coatNo);
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, coats } });
-    scheduleWrite(
+    set({ draft: { ...state.draft, coats }, mutatedAt: Date.now() });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -150,8 +141,11 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     const grid = [...state.draft.dft[side]];
     grid[index] = value;
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, dft: { ...state.draft.dft, [side]: grid } } });
-    scheduleWrite(
+    set({
+      draft: { ...state.draft, dft: { ...state.draft.dft, [side]: grid } },
+      mutatedAt: Date.now(),
+    });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -164,8 +158,11 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     const state = get();
     if (state.draft === null || state.stolenByOtherTab) return;
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, visual: { ...state.draft.visual, [id]: value } } });
-    scheduleWrite(
+    set({
+      draft: { ...state.draft, visual: { ...state.draft.visual, [id]: value } },
+      mutatedAt: Date.now(),
+    });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -178,8 +175,8 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
     const state = get();
     if (state.draft === null || state.stolenByOtherTab) return;
     const batchId = state.draft.batchId;
-    set({ draft: { ...state.draft, step } });
-    scheduleWrite(
+    set({ draft: { ...state.draft, step }, mutatedAt: Date.now() });
+    writer.schedule(
       batchId,
       () => get().draft,
       () => {
@@ -193,13 +190,9 @@ export const useCoatingStore = create<CoatingState>()((set, get) => ({
   },
 
   purge: async (batchId) => {
-    const existing = pendingWrites.get(batchId);
-    if (existing !== undefined) {
-      clearTimeout(existing);
-      pendingWrites.delete(batchId);
-    }
+    writer.clearPending(batchId);
     await db.coatingDrafts.delete(batchId);
-    set({ draft: null, hydrated: false, lastWriteAt: null });
+    set({ draft: null, hydrated: false, lastWriteAt: null, mutatedAt: null });
   },
 }));
 

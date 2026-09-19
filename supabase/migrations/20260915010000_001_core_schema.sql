@@ -59,7 +59,12 @@ create table public.instruments (
   interval_months integer not null check (interval_months between 1 and 120),
   retired_at      date,
   created_at      timestamptz not null default now(),
-  next_due_at     date generated always as (last_cal_at + (interval_months || ' months')::interval) stored
+  -- No generated column here: last_cal_at + text::interval is not IMMUTABLE
+  -- (IntervalStyle is a GUC), so Postgres 15 refuses it as a stored
+  -- expression. next_due_at is maintained by trigger `instruments_next_due`
+  -- (migration 003) instead — one owner for the computation, readings/RLS
+  -- unaffected (edge 1.13 unchanged).
+  next_due_at     date
 );
 
 -- Dimension template rows, ordered per revision (IM-02). Tolerance limits are

@@ -142,8 +142,13 @@ Enterprise-Software/
 ### Prerequisites
 - **Node.js**: `v20.x` or `v24.x` (LTS)
 - **npm**: `v10.x` or later
+- **Supabase CLI** (linked to the hosted project) — `supabase link --project-ref hbwbevbgrugpgimzxrkh`
 
-### Installation
+> **Backend note:** the local Docker Supabase stack has been removed. The hosted
+> **Simran Technocrats** project is the single backend — migrations and seed are
+> applied through the Supabase MCP (`apply_migration` / `execute_sql`) or the dashboard SQL editor.
+
+### Installation (local, one command per step)
 
 1. **Clone the repository:**
    ```bash
@@ -156,16 +161,38 @@ Enterprise-Software/
    npm install
    ```
 
-3. **Configure Environment Variables:**
+3. **Configure environment variables** — copy `.env.example` to `.env.local` and
+   set `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` to the hosted project's
+   values (Supabase dashboard → Project Settings → API):
    ```bash
    cp .env.example .env.local
    ```
-   *Fill in your Supabase project URL and anonymous key inside `.env.local`.*
+   *Keys are safe to ship to the browser — Postgres RLS, not secrecy, protects the data.*
 
 4. **Launch the development server:**
    ```bash
    npm run dev
    ```
+
+### Demo accounts (seeded)
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@simran.local` | `Simran#2026` |
+| QC Inspector | `inspector1@simran.local` | `Simran#2026` |
+| Quality Head | `qh@simran.local` | `Simran#2026` |
+| NACE Inspector | `nace@simran.local` | `Simran#2026` |
+
+*Dev/demo credentials only — rotate before any real deployment. The Quality Head must enroll TOTP (`MFA enrollment` in the profile menu) once before an approval will pass the server's AAL2 gate.*
+
+### Accounts — provisioned, not self-registered
+
+Self-service sign-up is **disabled by design**: a quality system doesn't accept
+anonymous registrations. The administrator creates accounts in the Supabase
+dashboard (Authentication → Users), one per role — QC Inspector, NACE Inspector,
+Quality Head, Admin. The `on_auth_user_created` trigger provisions the profile,
+and role changes are server-side admin actions, never self-service. The `/signup`
+route explains this model to anyone who lands on it.
 
 ---
 
@@ -193,17 +220,37 @@ npm run lint
 npm run format
 ```
 
+### End-to-end journeys (Playwright)
+
+The `e2e/` suite has two layers:
+
+- **Always-green checks** — `smoke.spec.ts` (boot + auth guard) and
+  `print.spec.ts` (controlled-format print baselines). These need no database.
+- **Credential-gated journeys** — `journeys.spec.ts` (J1–J4) drives the running
+  app against a seeded Supabase project. They skip unless the demo credentials
+  are exported, so a bare checkout stays green:
+  ```bash
+  export E2E_BASE_URL=http://localhost:5173
+  export E2E_INSPECTOR_EMAIL=inspector1@simran.local E2E_INSPECTOR_PASSWORD='Simran#2026'
+  export E2E_QH_EMAIL=qh@simran.local          E2E_QH_PASSWORD='Simran#2026'
+  npm run test:e2e
+  ```
+  Against the hosted project, `npm run dev` first (see above).
+
 ---
 
 ## 📚 Documentation Index
 
-All implementation details are strictly documented under [`docs/`](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs):
+All implementation details are strictly documented under [`docs/`](docs):
 
-- **[Application Flow](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs/project/application-flow.md)** — Complete step-by-step user journey and state diagrams
-- **[Product Requirements Document (PRD)](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs/project/product-requirements.md)** — Functional specifications and acceptance criteria
-- **[Technology Stack Decision Record](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs/project/technology-stack.md)** — Rationale for architecture choices
-- **[Offline Sync Architecture](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs/project/offline-sync-architecture.md)** — Local storage, journal queue, and reconciliation
-- **[Domain Crash Course](file:///d:/Skyrn%20Studio/Projects/Enterprise%20Software/docs/teaching/domain-crash-course.md)** — Engineering handbook on tolerances, ISO 9001 & ISO 12944
+- **[Application Flow](docs/project/application-flow.md)** — Complete step-by-step user journey and state diagrams
+- **[Product Requirements Document (PRD)](docs/project/product-requirements.md)** — Functional specifications and acceptance criteria
+- **[Technology Stack Decision Record](docs/project/technology-stack.md)** — Rationale for architecture choices
+- **[Offline Sync Architecture](docs/project/offline-sync-architecture.md)** — Local storage, journal queue, and reconciliation
+- **[Demo Runbook & Landing Script](docs/DEMO_RUNBOOK.md)** — Feature-by-feature demo script with the exact test data, plus the close
+- **[Report Fidelity Sign-Off](docs/project/report-fidelity-signoff.md)** — Line-by-line checklist for ST/QC/02 & ST/QC/04 against the audited originals
+- **[Testing & Quality Plan](docs/project/testing-quality-plan.md)** — Unit, property, and E2E strategy
+- **[Domain Crash Course](docs/teaching/domain-crash-course.md)** — Engineering handbook on tolerances, ISO 9001 & ISO 12944
 
 ---
 

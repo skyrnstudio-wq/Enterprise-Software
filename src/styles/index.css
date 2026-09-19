@@ -164,14 +164,26 @@
   size: A4 portrait;
   /* Audited-original margins (workbook-audit §3: 12.7 mm binding edge). */
   margin: 14mm 12mm 16mm 12mm;
+
+  /* Running footer (D37) — "Page n of m" in the bottom margin of EVERY page,
+     independent of the sheet's static identity footer. Chrome 131+ / Edge
+     support @page margin boxes with the page counters, so no JS and no
+     browser-dialog footer is needed. Engines without margin-box support omit
+     it silently; the print dialog's own header/footer remains the fallback.
+     No `var()` here — custom properties do not resolve reliably in margin
+     boxes, so the family stack is written out. */
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 8.5pt;
+    color: #1a1d21;
+  }
 }
 
-/* Static footer (plan decision): browser pipelines don't support CSS running
-   elements, so each report sheet ends with a `.print-footer` block carrying
-   format · rev · issue date · batch id · export ref. The print dialog
-   supplies per-page numbers; if the client QH rejects that at the §6
-   fidelity session, the Puppeteer fallback (pre-approved in
-   technology-stack.md §3.8) provides `page n of m` via footerTemplate. */
+/* Static identity footer: each report sheet ENDS with a `.print-footer` block
+   carrying format · rev · issue date · batch id · export ref (the controlled
+   identity of the document). The per-page "Page n of m" counter rides the
+   @page running footer above, so the two never duplicate each other. */
 .print-footer {
   display: flex;
   align-items: baseline;
@@ -374,6 +386,21 @@ html[data-sunlight] .sunlight-accent {
 html[data-sunlight] .sunlight-panel thead,
 html[data-sunlight] thead.sunlight-panel {
   background: #f2f2ef;
+}
+
+/* G11 — DFT/measurement cells: heavier rules + dark text so the 6×5 grid
+   survives direct sun; borders go near-black like the paper form. */
+html[data-sunlight] .measurement input,
+html[data-sunlight] input.measurement {
+  border-color: #33373d;
+  color: #111316;
+  background: #ffffff;
+}
+
+/* Filled readings stay high-contrast (bg-sunken is too faint outdoors). */
+html[data-sunlight] input.measurement:not(:placeholder-shown),
+html[data-sunlight] input.measurement[value]:not([value=""]) {
+  background: #eef2ee;
 }
 
 /*

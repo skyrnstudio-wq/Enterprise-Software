@@ -85,19 +85,21 @@ export function isSuspiciousUniformity(samples: (number | null)[], toleranceSpan
 // ——————————————————————————————————————————————————— Quick-fill (DIM-05)
 
 /**
- * Edge 3.6: Copy-01→05 is disabled while sample 01 is empty; when 01 carries
- * warn/fail the copy is ALLOWED (the row's status follows the copied value).
+ * DIM-05 "Copy to all 5" semantics: each row's own sample 01 fills that row's
+ * samples 02–05 — never across rows (a copy across rows silently wipes real
+ * readings; the original per-row semantics is what the PRD specifies).
+ * Edge 3.6: the action is enabled while ANY row has sample 01 entered; rows
+ * whose 01 carries warn/fail copy too (the row's status follows the copy).
+ * Pure so the shape is pinned by tests and the route just applies the result.
  */
-export function canCopyFirstSample(samples: (number | null)[]): boolean {
-  return samples[0] !== null && samples[0] !== undefined;
-}
-
-/**
- * Edge 3.7: Fill Nominal is allowed on reference dimensions — a reference is
- * still a real reading and the row stays evaluated.
- */
-export function canFillNominal(_isReference: boolean): boolean {
-  return true;
+export function copyFirstToAllRows(
+  rows: { samples: (number | null)[] }[],
+): { samples: (number | null)[] }[] {
+  return rows.map((row) => {
+    const first = row.samples[0];
+    if (first === null || first === undefined) return row;
+    return { ...row, samples: [first, first, first, first, first] };
+  });
 }
 
 // ——————————————————————————————————————————————————— Keyboard model (DIM-03)

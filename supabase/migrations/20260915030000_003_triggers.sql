@@ -44,7 +44,34 @@ create trigger coat_logs_immutable
   before update or delete on public.coat_logs
   for each row execute function public.forbid_approved_mutation();
 
+-- ---------------------------------------------------------------------------
+-- 3.1b instruments.next_due_at maintenance — the generated-column expression
+-- (last_cal_at + text::interval) is not IMMUTABLE, so the computation lives
+-- in exactly one trigger: any insert/update recomputes from last_cal +
+-- interval_months. Retired instruments keep their last computed due date.
+-- ---------------------------------------------------------------------------
 
+create or replace function public.maintain_instruments_next_due()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.next_due_at := (new.last_cal_at + make_interval(months => new.interval_months))::date;
+  return new;
+end;
+$$;
+
+create trigger instruments_next_due
+  before insert or update of last_cal_at, interval_months on public.instruments
+  for each row execute function public.maintain_instruments_next_due();
+
+-- ---------------------------------------------------------------------------
+-- 3.1c Batches guard — immutability + state machine + IM-05 revision lock.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.guard_batches_mutation()
 returns trigger
 language plpgsql
 security definer

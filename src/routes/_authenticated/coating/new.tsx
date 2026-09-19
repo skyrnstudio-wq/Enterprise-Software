@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { listItems } from "@/lib/api/admin";
 import { latestRevisionForItem, getBatchHeader } from "@/lib/api/batches";
 import { createCoatingBatch, getCoatingSpec } from "@/lib/api/coating";
+import { recordRecentItem, sortItemsRecentFirst } from "@/lib/recent-items";
 import { batchHeaderSchema } from "@/domain/schemas";
 import { useCoatingStore } from "@/lib/store/coating-store";
 import type { CoatingDraft } from "@/lib/dexie/db";
@@ -14,7 +15,10 @@ import { Caption, StatusChip } from "@/components/ui/StatusChip";
 
 export const Route = createFileRoute("/_authenticated/coating/new")({
   validateSearch: (search: Record<string, unknown>) => ({
+    /** `from` = linked dimensional batch (header inheritance, P-02). */
     from: typeof search.from === "string" ? search.from : undefined,
+    /** `item` = preselected item id (linked flow skips the picker). */
+    item: typeof search.item === "string" ? search.item : undefined,
   }),
   component: NewCoatingPage,
 });
@@ -39,8 +43,20 @@ function emptyCoats(): CoatingDraft["coats"] {
  */
 function NewCoatingPage() {
   const navigate = useNavigate();
-  const { from } = Route.useSearch();
+  const { from, item: presetItem } = Route.useSearch();
   const items = useQuery({ queryKey: ["items", ""], queryFn: () => listItems("") });
+
+  // Linked entry (`?item=`): preselect once the list arrives — the inspector
+  // goes straight to the header, no picker scroll.
+  const presetApplied = useRef(false);
+  useEffect(() => {
+    if (presetApplied.current || presetItem === undefined || items.data === undefined) return;
+    const match = items.data.find((it) => it.id === presetItem);
+    if (match !== undefined) {
+      setSelected({ id: match.id, item_code: match.item_code, customer_name: match.customer_name });
+    }
+    presetApplied.current = true;
+  }, [presetItem, items.data]);
   const linkedHeader = useQuery({
     queryKey: ["batch-header", from],
     queryFn: () => getBatchHeader(from as string),
@@ -123,7 +139,6 @@ function NewCoatingPage() {
           inspection_date: parsed.data.inspectionDate,
           lot_quantity: parsed.data.lotQuantity,
         },
-        fxGrade: "C3",
         surfacePrep: {
           steelGrade: "MS Sheet Fabrication",
           blastMethod: "Abrasive Blast Cleaning",
@@ -149,6 +164,7 @@ function NewCoatingPage() {
         step: 0,
         savedAt: new Date(0).toISOString(),
       });
+      recordRecentItem(selected.id);
       await navigate({ to: "/coating/$batchId", params: { batchId } });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Could not create the batch");
@@ -173,7 +189,9 @@ function NewCoatingPage() {
         {selected === null ? (
           <div className="space-y-2">
             {items.isLoading ? <Caption>loading…</Caption> : null}
-            {(items.data ?? []).slice(0, 12).map((it) => (
+            {sortItemsRecentFirst(items.data ?? [])
+              .slice(0, 12)
+              .map((it) => (
               <button
                 key={it.id}
                 type="button"

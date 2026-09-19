@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { MfaEnrollDialog } from "@/components/auth/MfaEnrollDialog";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -151,14 +152,23 @@ export function AppShell({
   children,
 }: AppShellProps): React.ReactElement {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [enrollOpen, setEnrollOpen] = useState(false);
   const items = navFor(hasRole);
 
   const identity = (
     <div className="mt-auto border-t border-ink-200 p-3">
       <div className="sunlight-muted truncate text-sm font-medium">{profile?.full_name ?? "—"}</div>
       <Caption className="sunlight-muted">{profile?.role ?? "—"}</Caption>
-      {!mfaSatisfied ? (
-        <p className="mt-1 text-[11px] font-medium text-status-warn-fg">▲ MFA enrollment required</p>
+      {needsMfa(mfaSatisfied, hasRole) ? (
+        <button
+          type="button"
+          onClick={() => {
+            setEnrollOpen(true);
+          }}
+          className="mt-1 block text-left text-[11px] font-medium text-status-warn-fg underline underline-offset-2 hover:text-status-warn-fg/80"
+        >
+          ▲ MFA enrollment required — set up now
+        </button>
       ) : null}
       <button
         type="button"
@@ -248,14 +258,31 @@ export function AppShell({
         <div className="min-w-0 flex-1">
           {needsMfa(mfaSatisfied, hasRole) ? (
             <div className="border-b border-status-warn-fg bg-status-warn-bg px-4 py-2 text-sm text-status-warn-fg lg:px-8">
-              Your role requires two-factor authentication. Enroll from the profile menu before
-              using QH/Admin affordances — approval actions remain blocked server-side until then
-              (SO-01…04).
+              <span>
+                Your role requires two-factor authentication. Enroll now — approval actions remain
+                blocked server-side until then (SO-01…04).
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEnrollOpen(true);
+                }}
+                className="ml-1 font-semibold underline underline-offset-2 hover:opacity-80 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+              >
+                Set up MFA →
+              </button>
             </div>
           ) : null}
           <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</main>
         </div>
       </div>
+      {enrollOpen ? (
+        <MfaEnrollDialog
+          open
+          onOpenChange={setEnrollOpen}
+          onEnrolled={() => { window.location.reload(); }}
+        />
+      ) : null}
     </div>
   );
 }

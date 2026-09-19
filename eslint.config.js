@@ -9,7 +9,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "coverage", "dev-dist", "node_modules", "playwright-report", "test-results"],
+    ignores: ["dist", "coverage", "dev-dist", "node_modules", "playwright-report", "test-results", "playwright.local.config.ts", "pw-illustrate.config.ts", "pw-illustrate2.config.ts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

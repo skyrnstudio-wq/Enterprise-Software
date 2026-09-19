@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { SurfacePrepSection, PaintLogSection } from "@/components/coating/CoatingSections";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftToLine, ChevronLeft, ChevronRight, FilePlus2, Send } from "lucide-react";
@@ -11,30 +12,24 @@ import {
   canSubmitCoating,
   evaluatePsychroGate,
   parseCoatingNumber,
+  shelfLifeBlocks,
+  shelfLifeStatus,
 } from "@/domain/coating";
 import { computeDftStats } from "@/domain/dft-stats";
+import { NcrDraftDialog } from "@/components/ncr/NcrDraftDialog";
 import { WizardRail } from "@/components/ui/CompliancePanel";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
-import { FormRow, TextInput } from "@/components/ui/FormRow";
 import { Caption, StatusChip } from "@/components/ui/StatusChip";
+import { SaveIndicator } from "@/components/ui/SaveIndicator";
 import { Toast } from "@/components/ui/DataTable";
-import {
-  PsychrometricPanel,
-  DftPanel,
-  ShelfLifeChip,
-  ProfileVerdictChip,
-  WftVerdictChip,
-} from "@/components/coating/CoatingPanels";
+import { PsychrometricPanel, DftPanel } from "@/components/coating/CoatingPanels";
 
 export const Route = createFileRoute("/_authenticated/coating/$batchId")({
   component: CoatingWizardPage,
 });
 
 const STEPS = ["Surface prep", "Conditions", "Paint log", "DFT grids", "Visual + submit"];
-
-const selectClass =
-  "h-9 w-full rounded-xs border border-ink-300 bg-paper-raised px-2 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:opacity-50";
 
 function emptyCoats(): CoatingDraft["coats"] {
   return [1, 2, 3].map((coatNo) => ({
@@ -82,8 +77,9 @@ function CoatingWizardPage() {
   const hydrated = useCoatingStore((s) => s.hydrated);
   const lastWriteAt = useCoatingStore((s) => s.lastWriteAt);
   const stolen = useCoatingStore((s) => s.stolenByOtherTab);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const [ack, setAck] = useState(false);
+  const [ncrOpen, setNcrOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{
     title: string;
@@ -129,7 +125,6 @@ function CoatingWizardPage() {
               inspection_date: header.inspection_date,
               lot_quantity: header.lot_qty,
             },
-            fxGrade: "C3",
             surfacePrep: defaultSurfacePrep(),
             conditions: { steelTempC: null, ambientTempC: null, relativeHumidity: null },
             coats: emptyCoats(),
@@ -190,6 +185,11 @@ function CoatingWizardPage() {
     const coatsComplete = draft.coats.every(
       (c) => c.product.trim() !== "" && c.partABatch.trim() !== "",
     );
+    // COAT-04: any coat whose Part A is past shelf-life hard-blocks submit.
+    const today = new Date().toISOString().slice(0, 10);
+    const shelfLifeBlocked = draft.coats.some((c) =>
+      shelfLifeBlocks(shelfLifeStatus(c.mfgDate, 12, today)),
+    );
     const insideCount = computeDftStats(draft.dft.INSIDE, 240).count;
     const outsideCount = computeDftStats(draft.dft.OUTSIDE, 180).count;
     const visualChecksComplete = Object.values(draft.visual).every((v) => v !== null);
@@ -199,6 +199,7 @@ function CoatingWizardPage() {
       gate,
       surfacePrepComplete,
       coatsComplete,
+      shelfLifeBlocked,
       dftCounts: { INSIDE: insideCount, OUTSIDE: outsideCount },
       visualChecksComplete,
     };
@@ -219,6 +220,7 @@ function CoatingWizardPage() {
       conditionsEntered: derived.conditionsEntered,
       psychroLocked: derived.psychroLocked,
       coatsComplete: derived.coatsComplete,
+      shelfLifeBlocked: derived.shelfLifeBlocked,
       dftCounts: derived.dftCounts,
       partialDftAcknowledged: ack,
       visualChecksComplete: derived.visualChecksComplete,
@@ -293,10 +295,7 @@ function CoatingWizardPage() {
     }
   }
 
-  const savedAgo =
-    lastWriteAt === null
-      ? "not saved yet"
-      : `${String(Math.max(0, Math.round((Date.now() - lastWriteAt) / 1000)))}s ago`;
+  const mutatedAt = useCoatingStore((s) => s.mutatedAt);
 
   if (hydrated && draft === null) {
     return (
@@ -326,7 +325,8 @@ function CoatingWizardPage() {
             <span className="measurement">{draft.header.item_code}</span> — coating inspection
           </h1>
           <Caption>
-            PO {draft.header.po_number} · lot {draft.header.delivery_batch_code} · saved {savedAgo}
+            PO {draft.header.po_number} · lot {draft.header.delivery_batch_code} ·{" "}
+            <SaveIndicator lastWriteAt={lastWriteAt} dirtyAt={mutatedAt} tick={tick} />
           </Caption>
         </div>
         <Link to="/" className="text-sm text-ink-500 hover:text-ink-900">
@@ -348,129 +348,11 @@ function CoatingWizardPage() {
         <div className="min-w-0 space-y-4">
           {/* ---------------- Section A — surface prep (COAT-01/02) ---------- */}
           {step === 0 ? (
-            <SectionCard letter="A" title="Surface preparation">
-              <div className="space-y-4">
-                <FormRow label="Steel grade" htmlFor="sp-steel">
-                  <TextInput
-                    id="sp-steel"
-                    value={draft.surfacePrep.steelGrade}
-                    disabled={stolen}
-                    onChange={(e) => {
-                      useCoatingStore.getState().setSurfacePrep({ steelGrade: e.target.value });
-                    }}
-                  />
-                </FormRow>
-                <FormRow label="Blast method" htmlFor="sp-method">
-                  <TextInput
-                    id="sp-method"
-                    value={draft.surfacePrep.blastMethod}
-                    disabled={stolen}
-                    onChange={(e) => {
-                      useCoatingStore.getState().setSurfacePrep({ blastMethod: e.target.value });
-                    }}
-                  />
-                </FormRow>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormRow label="Blast grade" htmlFor="sp-grade" helper="ISO 8501-1">
-                    <TextInput
-                      id="sp-grade"
-                      value={draft.surfacePrep.blastGrade}
-                      disabled={stolen}
-                      onChange={(e) => {
-                        useCoatingStore.getState().setSurfacePrep({ blastGrade: e.target.value });
-                      }}
-                    />
-                  </FormRow>
-                  <FormRow label="Grit size" htmlFor="sp-grit">
-                    <TextInput
-                      id="sp-grit"
-                      value={draft.surfacePrep.gritSize}
-                      disabled={stolen}
-                      onChange={(e) => {
-                        useCoatingStore.getState().setSurfacePrep({ gritSize: e.target.value });
-                      }}
-                    />
-                  </FormRow>
-                </div>
-                <fieldset className="space-y-2">
-                  <legend className="text-sm font-medium text-ink-700">
-                    Pre-treatment verification (ISO 8501-3 P-2 / ISO 12944-4)
-                  </legend>
-                  {(
-                    [
-                      ["weldEdgeOk", "Welds / edges dressed smooth (P-2)"],
-                      ["solventCleanOk", "Solvent clean per ISO 12944-4"],
-                      ["waterBreakPass", "Water break test — no beading"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2 text-sm text-ink-900">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
-                        checked={draft.surfacePrep[key]}
-                        disabled={stolen}
-                        onChange={(e) => {
-                          useCoatingStore.getState().setSurfacePrep({ [key]: e.target.checked });
-                        }}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </fieldset>
-                <FormRow
-                  label="Profile µm"
-                  htmlFor="sp-profile"
-                  helper="Comparator G, Medium — working band 45–75 µm (COAT-02)"
-                >
-                  <div className="flex items-center gap-3">
-                    <TextInput
-                      id="sp-profile"
-                      inputMode="decimal"
-                      className="measurement max-w-[140px]"
-                      value={
-                        draft.surfacePrep.profileUm === null
-                          ? ""
-                          : String(draft.surfacePrep.profileUm)
-                      }
-                      disabled={stolen}
-                      onChange={(e) => {
-                        useCoatingStore
-                          .getState()
-                          .setSurfacePrep({ profileUm: parseCoatingNumber(e.target.value) });
-                      }}
-                    />
-                    <ProfileVerdictChip valueUm={draft.surfacePrep.profileUm} />
-                  </div>
-                </FormRow>
-                <FormRow
-                  label="Profile gauge"
-                  htmlFor="sp-gauge"
-                  helper="Edge 4.12: per batch, shown on both DFT panels"
-                >
-                  <select
-                    id="sp-gauge"
-                    className={selectClass}
-                    value={draft.surfacePrep.gaugeInstrumentId ?? ""}
-                    disabled={stolen}
-                    onChange={(e) => {
-                      useCoatingStore
-                        .getState()
-                        .setSurfacePrep({
-                          gaugeInstrumentId: e.target.value === "" ? null : e.target.value,
-                        });
-                    }}
-                  >
-                    <option value="">— select instrument —</option>
-                    {(instruments.data ?? []).map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.label}
-                        {i.expired ? " (EXPIRED)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </FormRow>
-              </div>
-            </SectionCard>
+            <SurfacePrepSection
+              surfacePrep={draft.surfacePrep}
+              instruments={instruments.data ?? []}
+              disabled={stolen}
+            />
           ) : null}
 
           {/* ------------- Section B — psychrometrics (COAT-03) ------------- */}
@@ -486,139 +368,7 @@ function CoatingWizardPage() {
 
           {/* ------------- Section C — paint log (COAT-04) ------------------ */}
           {step === 2 ? (
-            <div className="space-y-4">
-              {draft.coats.map((coat, idx) => {
-                const wftEntered = coat.wftUm.filter((w): w is number => w !== null);
-                const wftAvg =
-                  wftEntered.length > 0
-                    ? wftEntered.reduce((s, v) => s + v, 0) / wftEntered.length
-                    : null;
-                return (
-                  <SectionCard
-                    key={coat.coatNo}
-                    letter="C"
-                    title={`Coat ${String(coat.coatNo)} — ${
-                      coat.coatNo === 1
-                        ? "Primer"
-                        : coat.coatNo === 2
-                          ? "Intermediate"
-                          : "PU Finish"
-                    }`}
-                  >
-                    <div className="space-y-4">
-                      <FormRow label="Product" htmlFor={`c${String(idx)}-product`}>
-                        <TextInput
-                          id={`c${String(idx)}-product`}
-                          value={coat.product}
-                          disabled={stolen}
-                          onChange={(e) => {
-                            useCoatingStore
-                              .getState()
-                              .setCoat({ ...coat, product: e.target.value });
-                          }}
-                        />
-                      </FormRow>
-                      <FormRow
-                        label="Part A mfg date"
-                        htmlFor={`c${String(idx)}-mfg`}
-                        helper="Shelf-life is validated from this date (COAT-04)"
-                      >
-                        <div className="flex items-center gap-3">
-                          <TextInput
-                            id={`c${String(idx)}-mfg`}
-                            type="date"
-                            className="max-w-[200px]"
-                            value={coat.mfgDate ?? ""}
-                            disabled={stolen}
-                            onChange={(e) => {
-                              useCoatingStore
-                                .getState()
-                                .setCoat({
-                                  ...coat,
-                                  mfgDate: e.target.value === "" ? null : e.target.value,
-                                });
-                            }}
-                          />
-                          <ShelfLifeChip mfgDate={coat.mfgDate} today={today} />
-                        </div>
-                      </FormRow>
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormRow label="Part A batch" htmlFor={`c${String(idx)}-pa`}>
-                          <TextInput
-                            id={`c${String(idx)}-pa`}
-                            className="measurement"
-                            value={coat.partABatch}
-                            disabled={stolen}
-                            onChange={(e) => {
-                              useCoatingStore
-                                .getState()
-                                .setCoat({ ...coat, partABatch: e.target.value });
-                            }}
-                          />
-                        </FormRow>
-                        <FormRow label="Part B hardener" htmlFor={`c${String(idx)}-pb`}>
-                          <TextInput
-                            id={`c${String(idx)}-pb`}
-                            className="measurement"
-                            value={coat.partBBatch}
-                            disabled={stolen}
-                            onChange={(e) => {
-                              useCoatingStore
-                                .getState()
-                                .setCoat({ ...coat, partBBatch: e.target.value });
-                            }}
-                          />
-                        </FormRow>
-                      </div>
-                      <FormRow
-                        label="Thinner %"
-                        htmlFor={`c${String(idx)}-th`}
-                        helper="Advisory — recorded on the form"
-                      >
-                        <TextInput
-                          id={`c${String(idx)}-th`}
-                          inputMode="decimal"
-                          className="measurement max-w-[140px]"
-                          value={coat.thinnerPercent === null ? "" : String(coat.thinnerPercent)}
-                          disabled={stolen}
-                          onChange={(e) => {
-                            useCoatingStore
-                              .getState()
-                              .setCoat({
-                                ...coat,
-                                thinnerPercent: parseCoatingNumber(e.target.value),
-                              });
-                          }}
-                        />
-                      </FormRow>
-                      <FormRow
-                        label="WFT µm"
-                        helper="80–100 µm working band; mils land out-of-range (edge 4.15)"
-                      >
-                        <div className="flex items-center gap-3">
-                          {coat.wftUm.map((w, wi) => (
-                            <TextInput
-                              key={wi}
-                              inputMode="decimal"
-                              className="measurement max-w-[100px]"
-                              aria-label={`Coat ${String(coat.coatNo)} WFT reading ${String(wi + 1)}`}
-                              value={w === null ? "" : String(w)}
-                              disabled={stolen}
-                              onChange={(e) => {
-                                const next = [...coat.wftUm];
-                                next[wi] = parseCoatingNumber(e.target.value);
-                                useCoatingStore.getState().setCoat({ ...coat, wftUm: next });
-                              }}
-                            />
-                          ))}
-                          <WftVerdictChip valueUm={wftAvg} />
-                        </div>
-                      </FormRow>
-                    </div>
-                  </SectionCard>
-                );
-              })}
-            </div>
+            <PaintLogSection coats={draft.coats} today={today} disabled={stolen} />
           ) : null}
 
           {/* ------------- Section D — DFT grids (COAT-05/06) --------------- */}
@@ -651,8 +401,16 @@ function CoatingWizardPage() {
           {/* -------- Section E — visual + submit (COAT-07, edge 4.18) ------ */}
           {step === 4 ? (
             <div className="space-y-4">
-              <SectionCard letter="E" title="Visual inspection">
-                <div className="space-y-3">
+              <SectionCard
+                letter="E"
+                title={`Visual inspection — ${String(
+                  Object.values(draft.visual).filter((v) => v !== null).length,
+                )}/5 answered`}
+              >
+                {/* G3: 44px tri-state buttons — a gloved thumb answers on the
+                    shop floor faster than a select. Edge 4.18: unanswered is
+                    its own state, never implicitly "no defect". */}
+                <div className="space-y-2">
                   {(
                     [
                       ["pinholes", "Pinholes"],
@@ -661,31 +419,54 @@ function CoatingWizardPage() {
                       ["peel_off", "Peel-off"],
                       ["blisters", "Blisters"],
                     ] as const
-                  ).map(([key, label]) => (
-                    <FormRow key={key} label={label} htmlFor={`v-${key}`}>
-                      <select
-                        id={`v-${key}`}
-                        className={selectClass}
-                        value={draft.visual[key] ?? ""}
-                        disabled={stolen}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          useCoatingStore
-                            .getState()
-                            .setVisualCheck(
-                              key,
-                              v === "pass" ? "pass" : v === "fail" ? "fail" : null,
-                            );
-                        }}
+                  ).map(([key, label]) => {
+                    const value = draft.visual[key];
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between gap-3 rounded-xs border border-ink-200 px-3 py-1.5"
                       >
-                        <option value="">— not answered —</option>
-                        <option value="pass">Free of defect</option>
-                        <option value="fail">Defect present</option>
-                      </select>
-                    </FormRow>
-                  ))}
+                        <span className="text-sm font-medium text-ink-900">{label}</span>
+                        <div className="flex gap-1.5">
+                          {(
+                            [
+                              ["pass", "✓ Free of defect", "pass"],
+                              ["fail", "✕ Defect present", "fail"],
+                            ] as const
+                          ).map(([v, lbl, glyph]) => {
+                            const selected = value === v;
+                            const tone =
+                              glyph === "pass"
+                                ? selected
+                                  ? "border-status-pass-fg bg-status-pass-bg text-status-pass-fg"
+                                  : "border-ink-300 text-ink-700 hover:border-status-pass-fg"
+                                : selected
+                                  ? "border-status-fail-fg bg-status-fail-bg text-status-fail-fg"
+                                  : "border-ink-300 text-ink-700 hover:border-status-fail-fg";
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                aria-pressed={selected}
+                                disabled={stolen}
+                                onClick={() => {
+                                  useCoatingStore
+                                    .getState()
+                                    .setVisualCheck(key, selected ? null : v);
+                                }}
+                                className={`h-11 min-w-44 rounded-xs border px-3 text-sm font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:opacity-50 ${tone}`}
+                              >
+                                {lbl}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                   <p className="text-xs text-ink-500">
-                    Edge 4.18: an unanswered check is never implicitly “no defect”.
+                    Tap again to clear an answer — an unanswered check is never implicitly “no
+                    defect” (edge 4.18).
                   </p>
                 </div>
               </SectionCard>
@@ -694,11 +475,7 @@ function CoatingWizardPage() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    setToast({
-                      title: "NCR draft",
-                      desc: "NCR authoring arrives with Phase 8 — the defect record is kept either way.",
-                      status: "warn",
-                    });
+                    setNcrOpen(true);
                   }}
                 >
                   <FilePlus2 size={14} className="mr-1 inline" /> Draft NCR for visual defect
@@ -779,6 +556,24 @@ function CoatingWizardPage() {
           </div>
         </div>
       </div>
+
+      <NcrDraftDialog
+        open={ncrOpen}
+        onOpenChange={setNcrOpen}
+        batchId={batchId}
+        source="COATING"
+        presetDescription={`Visual defect present: ${Object.entries(draft.visual)
+          .filter(([, v]) => v === "fail")
+          .map(([k]) => k)
+          .join(", ")}`}
+        onCreated={(ncrNumber) => {
+          setToast({
+            title: `NCR ${ncrNumber} opened`,
+            desc: "The register now carries the finding — Quality Head will disposition it.",
+            status: "pass",
+          });
+        }}
+      />
 
       {toast !== null ? (
         <Toast

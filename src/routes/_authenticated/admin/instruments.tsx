@@ -17,6 +17,7 @@ import { SectionCard, EmptyState } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
 import { FormRow, TextInput } from "@/components/ui/FormRow";
 import { TableSkeleton } from "@/components/ui/QueryState";
+import { InstrumentDrawer } from "@/components/admin/InstrumentDrawer";
 
 export const Route = createFileRoute("/_authenticated/admin/instruments")({
   component: InstrumentsPage,
@@ -42,6 +43,7 @@ export default function InstrumentsPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<InstrumentRowView | "new" | null>(null);
+  const [drawer, setDrawer] = useState<InstrumentRowView | null>(null);
   const [toast, setToast] = useState<{
     title: string;
     desc: string;
@@ -206,16 +208,28 @@ export default function InstrumentsPage() {
                   <StatusChip status={chipFor[inst.status]} label={labelFor[inst.status]} />
                 </TD>
                 <TD>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(inst);
-                    }}
-                    className="text-ink-500 hover:text-ink-900"
-                    aria-label={`Edit ${inst.instrument_code}`}
-                  >
-                    <Pencil size={14} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(inst);
+                      }}
+                      className="text-ink-500 hover:text-ink-900"
+                      aria-label={`Edit ${inst.instrument_code}`}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    {/* EQ-04 audit recall + G10 detail drawer. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawer(inst);
+                      }}
+                      className="text-xs text-ink-700 underline-offset-2 hover:underline"
+                    >
+                      History
+                    </button>
+                  </div>
                 </TD>
               </TR>
             ))}
@@ -233,6 +247,10 @@ export default function InstrumentsPage() {
           description={toast.desc}
           status={toast.status}
         />
+      ) : null}
+
+      {drawer !== null ? (
+        <InstrumentDrawer instrument={drawer} onClose={() => { setDrawer(null); }} />
       ) : null}
     </div>
   );

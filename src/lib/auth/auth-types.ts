@@ -28,6 +28,19 @@ export interface AuthState {
     | { kind: "mfa-required"; factorId: string }
     | { kind: "error"; message: string }
   >;
+  /**
+   * Create an account. `full_name` rides in user metadata so the
+   * `on_auth_user_created` trigger (migration 006) can fill the profile row.
+   * - `signed-in`     → confirmation disabled; the session is live.
+   * - `confirm-email` → the project requires email confirmation first.
+   */
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+  ) => Promise<
+    { kind: "signed-in" } | { kind: "confirm-email" } | { kind: "error"; message: string }
+  >;
   verifyMfa: (
     factorId: string,
     code: string,

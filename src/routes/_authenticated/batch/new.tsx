@@ -5,6 +5,7 @@ import { listItems } from "@/lib/api/admin";
 import { createBatchDraft, latestRevisionForItem, listDimensionRows } from "@/lib/api/batches";
 import { batchHeaderSchema } from "@/domain/schemas";
 import { useInspectionStore } from "@/lib/store/inspection-store";
+import { recordRecentItem, sortItemsRecentFirst } from "@/lib/recent-items";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
 import { FormRow, TextInput } from "@/components/ui/FormRow";
@@ -31,7 +32,7 @@ function NewBatchPage() {
   const [header, setHeader] = useState({
     po_number: "",
     delivery_batch_code: "",
-    inspection_date: "",
+    inspection_date: new Date().toISOString().slice(0, 10), // C5: today by default
     lot_quantity: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,6 +106,7 @@ function NewBatchPage() {
         cursor: null,
         savedAt: new Date(0).toISOString(),
       });
+      recordRecentItem(selected.id);
       await navigate({ to: "/batch/$batchId", params: { batchId } });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Could not create the batch");
@@ -121,7 +123,9 @@ function NewBatchPage() {
         {selected === null ? (
           <div className="space-y-2">
             {items.isLoading ? <Caption>loading…</Caption> : null}
-            {(items.data ?? []).slice(0, 12).map((it) => (
+            {sortItemsRecentFirst(items.data ?? [])
+              .slice(0, 12)
+              .map((it) => (
               <button
                 key={it.id}
                 type="button"

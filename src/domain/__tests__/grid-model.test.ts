@@ -5,8 +5,7 @@ import {
   splitPaste,
   rowStatus,
   isSuspiciousUniformity,
-  canCopyFirstSample,
-  canFillNominal,
+  copyFirstToAllRows,
   submissionChecklist,
   moveFocus,
 } from "../grid-model";
@@ -103,15 +102,31 @@ describe("isSuspiciousUniformity (edge 3.16)", () => {
   });
 });
 
-describe("quick-fill guards (edges 3.6/3.7)", () => {
-  it("Copy-01→05 disabled while sample 01 is empty", () => {
-    expect(canCopyFirstSample([null, 10, 10, 10, 10])).toBe(false);
+describe("quick-fill guards (DIM-05, edge 3.6)", () => {
+  it("copies each row's own sample 01 into that row's samples 02–05", () => {
+    const rows = [
+      { samples: [100.2, null, null, null, null] },
+      { samples: [24.9, null, null, null, null] },
+    ];
+    const out = copyFirstToAllRows(rows);
+    expect(out[0]?.samples).toEqual([100.2, 100.2, 100.2, 100.2, 100.2]);
+    expect(out[1]?.samples).toEqual([24.9, 24.9, 24.9, 24.9, 24.9]);
   });
-  it("allowed when 01 filled — even warn/fail (status follows the copy)", () => {
-    expect(canCopyFirstSample([9, 10, 10, 10, 10])).toBe(true);
+  it("never touches rows whose sample 01 is empty — and never crosses rows", () => {
+    const rows = [
+      { samples: [null, 10, 10, 10, 10] },
+      { samples: [9, 10, 10, 10, 10] },
+    ];
+    const out = copyFirstToAllRows(rows);
+    expect(out[0]?.samples).toEqual([null, 10, 10, 10, 10]); // untouched
+    expect(out[1]?.samples).toEqual([9, 9, 9, 9, 9]); // 9 stays in its own row
   });
-  it("Fill Nominal allowed on reference dimensions (edge 3.7)", () => {
-    expect(canFillNominal(true)).toBe(true);
+  it("copies warn/fail values too — the row status follows the copy (edge 3.6)", () => {
+    const out = copyFirstToAllRows([{ samples: [99.1, null, null, null, null] }]);
+    expect(out[0]?.samples).toEqual([99.1, 99.1, 99.1, 99.1, 99.1]);
+  });
+  it("empty grid is a no-op", () => {
+    expect(copyFirstToAllRows([])).toEqual([]);
   });
 });
 

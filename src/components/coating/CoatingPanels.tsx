@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 import { Caption, StatusChip } from "@/components/ui/StatusChip";
 import type { ChipStatus } from "@/components/ui/StatusChip";
 import { CompliancePanel } from "@/components/ui/CompliancePanel";
@@ -65,6 +65,7 @@ export function PsychrometricPanel({
     <CompliancePanel
       title="Dew point compliance"
       tag="AUTO-CALC"
+      formula="Magnus-Tetens (ISO 12944-7 annex): Td = 243.12·ln(a)/(17.62−ln(a)), a = RH/100·e^(17.62·Ta/(243.12+Ta)); ΔT = Ts − Td. Gate: ΔT ≥ 3.0 °C and RH ≤ 85 %."
       readout={readout}
       unit="°C ΔT"
       status={locked ? "fail" : gate === null ? "info" : "pass"}
@@ -151,6 +152,8 @@ function fmt(value: number | null | undefined, digits = 1): string {
     : value.toFixed(digits);
 }
 
+const DFT_COLS = 6; // G2 — 6×5 layout keeps every cell ≥44px on a tablet.
+
 export function DftPanel({
   sideLabel,
   system,
@@ -169,6 +172,39 @@ export function DftPanel({
 }) {
   const stats: DftStats = useMemo(() => computeDftStats(readings, nominal), [readings, nominal]);
   const iso = evaluateIso19840(stats);
+
+  // Grid nav (C3): cell refs + arrow-key walk + paste-fill from the drop point.
+  const cellRefs = useRef(new Map<number, HTMLInputElement>());
+  const registerCell = (i: number, el: HTMLInputElement | null): void => {
+    if (el === null) cellRefs.current.delete(i);
+    else cellRefs.current.set(i, el);
+  };
+  const focusCell = (i: number): void => {
+    cellRefs.current.get(i)?.focus();
+  };
+  const handleGridArrows = (e: KeyboardEvent<HTMLInputElement>, i: number): void => {
+    const moves: Record<string, number> = {
+      ArrowRight: i + 1,
+      ArrowLeft: i - 1,
+      ArrowDown: i + DFT_COLS,
+      ArrowUp: i - DFT_COLS,
+    };
+    const target = moves[e.key];
+    if (target === undefined) return;
+    e.preventDefault();
+    focusCell(target);
+  };
+  const handleGridPaste = (e: ClipboardEvent<HTMLInputElement>, i: number): void => {
+    const text = e.clipboardData.getData("text/plain");
+    if (text.trim() === "") return;
+    const parts = text.trim().split(/[\s;\t]+/);
+    if (parts.length <= 1) return; // single value → default paste
+    e.preventDefault();
+    parts.forEach((p, pi) => {
+      const target = i + pi;
+      if (target < readings.length) onChange(target, parseCoatingNumber(p));
+    });
+  };
 
   const verdictChip: { status: ChipStatus; label: string } = iso.compliant
     ? { status: "pass", label: "ISO 19840 PASS" }
@@ -210,32 +246,48 @@ export function DftPanel({
         </div>
       </dl>
 
-      <div className="mt-3 grid grid-cols-[repeat(13,minmax(0,1fr))] gap-1.5">
+      {/* G2: 6×5 grid (26 points + 4 inert slots) with ≥44px touch targets;
+          arrow keys walk the grid, multi-value paste fills from the drop point. */}
+      <div className="mt-3 grid grid-cols-6 gap-1.5">
         {readings.map((value, i) => {
           const flagged = value !== null && (value < 0.8 * nominal || value > 2.0 * nominal);
           return (
-            <label key={i} className="block">
-              <span className="sr-only">{`${sideLabel} point ${String(i + 1)}`}</span>
-              <input
-                inputMode="decimal"
-                autoComplete="off"
-                aria-label={`${sideLabel} point ${String(i + 1)}`}
-                disabled={disabled}
-                value={value === null ? "" : String(value)}
-                onChange={(e) => {
-                  onChange(i, parseCoatingNumber(e.target.value));
-                }}
-                className={`measurement h-8 w-full rounded-xs border px-1 text-center text-sm ${
-                  flagged
-                    ? "border-status-fail-fg bg-status-fail-bg text-status-fail-fg"
-                    : value !== null
-                      ? "border-ink-300 bg-paper-sunken text-ink-900"
-                      : "border-ink-300 bg-paper-raised text-ink-900"
-                } disabled:opacity-50`}
-              />
-            </label>
+            <input
+              key={i}
+              ref={(el) => {
+                registerCell(i, el);
+              }}
+              inputMode="decimal"
+              autoComplete="off"
+              aria-label={`${sideLabel} point ${String(i + 1)}`}
+              disabled={disabled}
+              value={value === null ? "" : String(value)}
+              onChange={(e) => {
+                onChange(i, parseCoatingNumber(e.target.value));
+              }}
+              onKeyDown={(e) => {
+                handleGridArrows(e, i);
+              }}
+              onPaste={(e) => {
+                handleGridPaste(e, i);
+              }}
+              className={`measurement h-11 w-full rounded-xs border px-1 text-center text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+                flagged
+                  ? "border-status-fail-fg bg-status-fail-bg text-status-fail-fg"
+                  : value !== null
+                    ? "border-ink-300 bg-paper-sunken text-ink-900"
+                    : "border-ink-300 bg-paper-raised text-ink-900"
+              } disabled:opacity-50`}
+            />
           );
         })}
+        {Array.from({ length: 30 - readings.length }, (_, i) => (
+          <div
+            key={`slot-${String(i)}`}
+            aria-hidden
+            className="h-11 rounded-xs border border-dashed border-ink-200"
+          />
+        ))}
       </div>
       <p className="mt-2 text-xs text-ink-500">
         {stats.count}/26 entered · nominal {nominal} µm · flagged readings breach the ISO 19840

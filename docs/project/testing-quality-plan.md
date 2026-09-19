@@ -69,6 +69,57 @@ Every domain rule named in the PRD has at least one test that fails loudly if th
 6. **Instrument expiry gate:** expired gauge selected → mandatory acknowledgement → QH sees flag.
 7. **Immutability:** approved batch exposes no edit affordance; direct API mutation attempt fails (defense-in-depth proof).
 
+### 5.1 Runnable path (implemented)
+
+The suite lives in `e2e/` and runs with `npm run test:e2e` against
+`E2E_BASE_URL` (default `http://localhost:5173`). Two layers:
+
+| Spec | Coverage | Needs DB? |
+|---|---|---|
+| `smoke.spec.ts` | app boot + auth guard routes to `/login` · the `/signup` gate explains the admin-provisioned access model | no |
+| `print.spec.ts` | ST/QC/02 + ST/QC/04 print layout baselines · **printed-artifact pagination + `@page` running footer** | no |
+| `journeys.spec.ts` | J1 autosave-survives-reload · J2 QH queue + decision bar **and the author's read-only view (separation of duties)** · J3 approved report · J4 offline entry persists | yes (seeded) |
+
+The journey layer is **credential-gated**: it skips unless the demo account
+env vars are exported (see `README.md` → End-to-end journeys), so a bare
+checkout keeps `npm run test:e2e` green. Full manual walkthrough runs against
+the hosted project (the local Docker stack was removed — hosted is the single
+backend), then:
+
+```bash
+export E2E_INSPECTOR_EMAIL=inspector1@simran.local E2E_INSPECTOR_PASSWORD='Simran#2026'
+export E2E_QH_EMAIL=qh@simran.local          E2E_QH_PASSWORD='Simran#2026'
+export E2E_QH_TOTP_SECRET=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP
+npm run test:e2e
+```
+
+Journeys 1, 2, 3, 6, 7 of the list above are additionally proven at the
+component/domain layer. The QH **approval** (2/7) is now fully automated:
+`supabase/seed.sql` plants a **verified TOTP factor** (fixed, public test
+secret) on the demo Quality Head, so J2 signs in through the real
+challenge → verify → AAL2 flow, builds and submits a fresh batch as the
+inspector, then approves it through the TOTP-gated decision modal — the batch
+lands APPROVED **by the test**, not by fixture. The separation-of-duties rule
+is pinned in the same suite: the real author is driven into the same record to
+prove the read-only view and that **no decision control is offered to the
+author**.
+
+The seeded fixtures (`supabase/seed.sql`) are idempotent — re-applied with
+the Supabase MCP onto the hosted project: **B1** is SUBMITTED (review queue)
+and **B2** APPROVED (dashboard report link), both authored by the seeded QC
+Inspector and carrying a warn row and a fail row so the review flag column is
+not trivial.
+
+**Printed-artifact assertions.** Pagination and the `@page` running footer live
+outside the DOM, so `print.spec.ts` prints the fixture headlessly
+(`page.pdf`) and reads the result back with `e2e/pdf-text.ts` — a dependency-free
+PDF text extractor (inflate the content streams, decode them through each
+font's `/ToUnicode` CMap). It asserts **both controlled formats appear in the
+stream, the document is genuinely paginated, and every page carries
+`Page n of m` with `m` equal to the true page count** (D37). The screenshot
+baselines (`*-snapshots/`) are rendering- and platform-specific: generate them
+once on the target runner and commit them, or the baseline tests fail by design.
+
 Profiles: desktop Chrome + iPad (shop-floor tablet) — configured in `playwright.config.ts`.
 
 ## 6. Data-Layer Tests (staging Supabase)

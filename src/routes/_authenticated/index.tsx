@@ -115,9 +115,15 @@ function DashboardPage() {
           <h1 className="text-lg font-semibold">Inspection batches</h1>
           <Caption>Dimensional · ST/QC/02 — Coating · ST/QC/04</Caption>
         </div>
-        <Button onClick={() => void navigate({ to: "/batch/new" })}>
-          <Plus size={16} aria-hidden /> New batch
-        </Button>
+        {/* G4: dual create actions — one per workflow, matching the side nav. */}
+        <div className="flex gap-2">
+          <Button onClick={() => void navigate({ to: "/batch/new" })}>
+            <Plus size={16} aria-hidden /> New dimensional
+          </Button>
+          <Button variant="secondary" onClick={() => void navigate({ to: "/coating/new" })}>
+            <Plus size={16} aria-hidden /> New coating
+          </Button>
+        </div>
       </div>
 
       <div className="kpi-strip" aria-label="Batch counts by status">

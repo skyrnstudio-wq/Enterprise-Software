@@ -132,7 +132,11 @@ export const FORMAT_META: Record<ReportFormat, FormatMeta> = {
   "ST/QC/04": {
     format: "ST/QC/04",
     rev: "Rev 01",
-    issueDate: "—",
+    // The audited Painting report.xlsx carries NO date of release (audit
+    // finding P-06) — there is no value to copy. "Not stated" mirrors the
+    // original honestly rather than inventing a date; the client QH may assign
+    // a real release date at the fidelity session, which is a one-line change.
+    issueDate: "Not stated",
     governedBy: "ISO 12944 / 8501 · NACE",
   },
 };

@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/auth-context";
 import { env } from "@/lib/env";
 import { usePrintGuard } from "@/lib/print";
+import { useOfflineDrain } from "@/lib/sync";
 import { AppShell } from "@/components/layout/AppShell";
 import { BatchSearchDialog } from "@/components/search/BatchSearchDialog";
 import { Skeleton } from "@/components/ui/QueryState";
@@ -24,6 +25,8 @@ function AuthenticatedLayout() {
   const onReportRoute =
     typeof window !== "undefined" && window.location.pathname.startsWith("/reports/");
   const printBlocked = usePrintGuard(onReportRoute);
+  // Offline submissions drain on boot + reconnect (Phase 3 step 11).
+  useOfflineDrain();
   const { user, profile, initializing, mfaSatisfied, hasRole, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);

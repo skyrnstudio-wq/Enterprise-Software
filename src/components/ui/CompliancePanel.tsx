@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Caption } from "./StatusChip";
 
 /**
@@ -9,6 +9,7 @@ import { Caption } from "./StatusChip";
 export function CompliancePanel({
   title,
   tag = "AUTO-CALC",
+  formula,
   readout,
   unit,
   note,
@@ -17,6 +18,8 @@ export function CompliancePanel({
 }: {
   title: string;
   tag?: string;
+  /** G7 — the derivation, shown on tap/click of the ƒx tag. */
+  formula?: string;
   /** The big mono figure — e.g. the ΔT readout. */
   readout: string;
   unit?: string;
@@ -42,17 +45,41 @@ export function CompliancePanel({
           ? "text-status-warn-fg"
           : "text-ink-900";
   const info = status === "info" ? "text-status-info-fg" : fg;
+  const [showFormula, setShowFormula] = useState(false);
 
   return (
-    <div className={`rounded-sm border p-4 ${panel}`}>
+    <div
+      className={`rounded-sm border p-4 ${panel}`}
+      // G8: gate trips are announced to AT — fail/warn are alert-level.
+      {...(status === "fail" || status === "warn" ? { role: "alert" as const } : {})}
+    >
       <div className="flex items-center justify-between">
         <Caption className={info}>{title}</Caption>
-        <span
-          className={`inline-flex items-center gap-1 rounded-xs bg-paper-raised px-1.5 py-0.5 text-[11px] font-medium ${info}`}
-        >
-          ƒx {tag}
-        </span>
+        {formula !== undefined ? (
+          <button
+            type="button"
+            aria-expanded={showFormula}
+            title={formula}
+            onClick={() => {
+              setShowFormula((v) => !v);
+            }}
+            className={`inline-flex items-center gap-1 rounded-xs bg-paper-raised px-1.5 py-0.5 text-[11px] font-medium underline decoration-dotted underline-offset-2 ${info} focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent`}
+          >
+            ƒx {tag}
+          </button>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 rounded-xs bg-paper-raised px-1.5 py-0.5 text-[11px] font-medium ${info}`}
+          >
+            ƒx {tag}
+          </span>
+        )}
       </div>
+      {formula !== undefined && showFormula ? (
+        <p className="measurement mt-2 rounded-xs bg-paper-raised px-2 py-1 text-[11px] text-ink-700">
+          {formula}
+        </p>
+      ) : null}
       <div className={`measurement mt-2 text-4xl font-medium tracking-tight ${fg}`}>
         {readout}
         {unit ? <span className="ml-1 text-lg">{unit}</span> : null}

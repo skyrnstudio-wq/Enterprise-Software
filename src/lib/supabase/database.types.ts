@@ -242,6 +242,7 @@ interface BatchCoating {
     blast_method: string;
     blast_grade: string;
     grit_size: string;
+    comparator_grade: "fine" | "medium" | "coarse" | null;
     profile_um: number | null;
     profile_gauge_instrument_id: string | null;
     created_at: string;
@@ -263,6 +264,23 @@ interface BatchVisualCheck {
   };
   Insert: Omit<BatchVisualCheck["Row"], "created_at"> & { created_at?: string };
   Update: Partial<BatchVisualCheck["Insert"]>;
+}
+interface Ncr {
+  Row: {
+    id: string;
+    ncr_number: string;
+    batch_id: string;
+    created_by: string;
+    description: string;
+    source: "DIMENSIONAL" | "COATING" | "REVIEW";
+    status: "OPEN" | "ACKNOWLEDGED" | "CLOSED";
+    disposition: "REWORK" | "USE_AS_IS" | "REJECT" | "SORT" | "REPAIR" | null;
+    closed_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  Insert: Partial<Ncr["Row"]>;
+  Update: Partial<Ncr["Row"]>;
 }
 
 export interface Database {
@@ -288,6 +306,7 @@ export interface Database {
       instruments: Table<Instrument["Row"], Instrument["Insert"], Instrument["Update"]>;
       audit_log: Table<AuditLog["Row"], AuditLog["Insert"], AuditLog["Update"]>;
       batch_coating: Table<BatchCoating["Row"], BatchCoating["Insert"], BatchCoating["Update"]>;
+      ncrs: Table<Ncr["Row"], Ncr["Insert"], Ncr["Update"]>;
       batch_visual_checks: Table<
         BatchVisualCheck["Row"],
         BatchVisualCheck["Insert"],
@@ -296,13 +315,16 @@ export interface Database {
     };
     Views: { [_ in never]: never };
     Functions: {
-      submit_batch: { Args: { p_batch_id: string; p_payload: Json }; Returns: Json };
+      // Signatures mirror migration 005 exactly — the hand-written types must
+      // not drift from the SQL or TS silently accepts calls PostgREST rejects
+      // with "Could not find the function … in the schema cache".
+      submit_batch: { Args: { p_batch_id: string; p_client_stats: Json }; Returns: Json };
       decide_batch: {
         Args: { p_batch_id: string; p_decision: string; p_comments: string | null };
         Returns: Json;
       };
       upsert_batch_draft: {
-        Args: { p_header: Json; p_readings: Json; p_coat_logs: Json; p_dft_readings: Json };
+        Args: { p_batch: Json; p_readings: Json; p_coat_logs: Json; p_dft_readings: Json };
         Returns: Json;
       };
       log_export: {

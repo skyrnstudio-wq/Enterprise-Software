@@ -57,8 +57,12 @@ export function DimensionGrid({ rows, instruments, readOnly = false }: Props) {
 
   const setSample = useInspectionStore((s) => s.setSample);
   const setCursor = useInspectionStore((s) => s.setCursor);
+  const applyInstrumentToAll = useInspectionStore((s) => s.applyInstrumentToAll);
   const stolenByOtherTab = useInspectionStore((s) => s.stolenByOtherTab);
   const draftRows = useInspectionStore((s) => s.draft?.rows);
+
+  // DIM-06 bulk-apply staging (committed on Change, not per keystroke).
+  const [bulkInstrument, setBulkInstrument] = useState("");
 
   const lock = readOnly || stolenByOtherTab;
 
@@ -131,6 +135,8 @@ export function DimensionGrid({ rows, instruments, readOnly = false }: Props) {
     });
   }, [rows, draftRows]);
 
+  const fmt = (n: number): string => n.toFixed(2);
+
   const suspicious = useMemo(() => {
     return rows.map((r) => {
       const draftRow = draftRows?.find((d) => d.dimension_row_id === r.dimension_row_id);
@@ -146,17 +152,47 @@ export function DimensionGrid({ rows, instruments, readOnly = false }: Props) {
           ▲ This draft is open in another tab — edits are disabled here (edge 3.12).
         </div>
       ) : null}
+      {/* Toolbar — row progress (G9) + DIM-06 bulk instrument apply. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 px-3 py-2">
+        <Caption aria-live="polite">
+          {`${String(rows.filter((_, i) => gridStatuses[i] === "pass" || gridStatuses[i] === "warn").length)}/${String(rows.length)} rows complete`}
+        </Caption>
+        <label className="flex items-center gap-2 text-xs text-ink-700">
+          <span className="hidden sm:inline">Same instrument for every row?</span>
+          <select
+            aria-label="Apply one instrument to all rows"
+            disabled={lock}
+            value={bulkInstrument}
+            onChange={(e) => {
+              const id = e.target.value === "" ? null : e.target.value;
+              setBulkInstrument(e.target.value);
+              applyInstrumentToAll(id);
+            }}
+            className="h-8 w-56 rounded-xs border border-ink-300 bg-paper-raised px-1 text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          >
+            <option value="">—</option>
+            {instruments.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.expired ? "▲ " : ""}
+                {i.label}
+              </option>
+            ))
+            }
+          </select>
+        </label>
+      </div>
       <div ref={scrollRef} className="max-h-[70vh] overflow-auto" data-testid="grid-scroll">
-        <div style={{ minWidth: 900 }}>
-          <div className="sticky top-0 z-20 grid grid-cols-[72px_1fr_repeat(5,92px)_150px] items-center border-b border-ink-300 bg-paper-sunken px-3 py-2">
+        <div style={{ minWidth: 1040 }}>
+          <div className="sticky top-0 z-20 grid grid-cols-[72px_1fr_124px_repeat(5,92px)_150px] items-center border-b border-ink-300 bg-paper-sunken px-3 py-2">
             <Caption>Sr.</Caption>
             <Caption>Dimension</Caption>
+            <Caption className="text-right">Min/Nom/Max</Caption>
             {Array.from({ length: SAMPLE_COUNT }, (_, i) => (
               <Caption key={i} className="text-center">
                 {`0${String(i + 1)}`}
               </Caption>
             ))}
-            <Caption className="text-right">Instrument</Caption>
+            <Caption className="sr-only">Instrument</Caption>
           </div>
           <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
             {virtualizer.getVirtualItems().map((vi) => {
@@ -183,7 +219,7 @@ export function DimensionGrid({ rows, instruments, readOnly = false }: Props) {
                 <div
                   key={r.dimension_row_id}
                   data-testid="grid-row"
-                  className="grid grid-cols-[72px_1fr_repeat(5,92px)_150px] items-center border-b border-ink-200 px-3"
+                  className="grid grid-cols-[72px_1fr_124px_repeat(5,92px)_150px] items-center border-b border-ink-200 px-3"
                   style={{
                     position: "absolute",
                     top: 0,
@@ -208,6 +244,15 @@ export function DimensionGrid({ rows, instruments, readOnly = false }: Props) {
                         ▲
                       </span>
                     ) : null}
+                  </span>
+                  {/* G1 — tolerance limits inline: the inspector never pages to
+                      the drawing to know the band. */}
+                  <span className="measurement pr-2 text-right text-[11px] leading-tight text-ink-500">
+                    {fmt(r.nominal - r.tol_minus)}
+                    <br />
+                    <span className="font-medium text-ink-900">{fmt(r.nominal)}</span>
+                    <br />
+                    {fmt(r.nominal + r.tol_plus)}
                   </span>
                   {Array.from({ length: SAMPLE_COUNT }, (_, si) => {
                     const sampleValue = draftRow?.samples[si] ?? null;
