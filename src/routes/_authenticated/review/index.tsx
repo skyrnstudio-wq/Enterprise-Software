@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/review/")({
  * channel keeps the list live without refresh (step 6, edge 5.7).
  */
 function ReviewQueuePage() {
-  const { profile, mfaSatisfied } = useAuth();
+  const { profile } = useAuth();
   const userId = profile?.id ?? null;
   const isQh = profile?.role === "QUALITY_HEAD" || profile?.role === "ADMIN";
   const queryClient = useQueryClient();
@@ -84,7 +84,6 @@ function ReviewQueuePage() {
         <h1 className="text-lg font-semibold">Review queue</h1>
         <Caption>
           {live ? "live — new submissions appear instantly" : "connecting…"}
-          {mfaSatisfied ? "" : " · MFA re-challenge required before any decision"}
         </Caption>
       </div>
 

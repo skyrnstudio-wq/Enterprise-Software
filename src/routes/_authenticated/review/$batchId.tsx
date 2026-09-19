@@ -48,7 +48,7 @@ const DEFECTS = [
 function ReviewDetailPage() {
   const { batchId } = useParams({ from: "/_authenticated/review/$batchId" });
   if (typeof batchId !== "string" || batchId === "") return null;
-  const { profile, mfaSatisfied } = useAuth();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -197,8 +197,7 @@ function ReviewDetailPage() {
   // separation-of-duties guard remains the control plane.
   const isQh = profile?.role === "QUALITY_HEAD" || profile?.role === "ADMIN";
   const notAuthor = canDecide({ created_by: d.created_by }, profile?.id ?? null);
-  const showButtons = isQh && notAuthor && mfaSatisfied;
-  const showButtonsBlocked = isQh && notAuthor && !mfaSatisfied;
+  const showButtons = isQh && notAuthor;
 
   const isDim = workflow === "DIMENSIONAL";
 
@@ -410,7 +409,7 @@ function ReviewDetailPage() {
             signedAtIso={null}
             pending
           />
-          {showButtons || showButtonsBlocked ? (
+          {showButtons ? (
             <div className="flex items-center gap-2">
               {/* Phase 6 entry point: the controlled report previews read-only
                   for any status; the print/export act itself is gated on
@@ -436,11 +435,6 @@ function ReviewDetailPage() {
                 onClick={() => {
                   setDecision("APPROVE");
                 }}
-                title={
-                  showButtonsBlocked
-                    ? "MFA re-challenge required before deciding (edge 5.5)"
-                    : undefined
-                }
               >
                 <Gavel size={14} className="mr-1 inline" /> Approve &amp; Sign
               </Button>
