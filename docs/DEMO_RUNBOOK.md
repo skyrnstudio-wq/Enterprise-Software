@@ -1,4 +1,3 @@
-
 # Simran QC Platform — Demo Runbook & Landing Script
 
 **Audience:** Simran Technocrats leadership + Quality Head
@@ -37,19 +36,20 @@
 
 When pitching to leadership and the Quality Head, frame this not merely as "modern software replacing paper," but as **eliminating acute compliance liabilities discovered in their audited plant workbooks** (`Inspection Format.xlsx` ST/QC/02 and `Painting report.xlsx` for Flender/Winergy).
 
-| Operational Dimension | Current Reality: Manual Excel Workbooks | Simran QC Platform (What We Built) | Direct Business Impact |
-| :--- | :--- | :--- | :--- |
-| **Inspection Throughput & Time** | **45–60 minutes per batch.** Inspector writes readings on shop-floor paper notepads, walks to a desktop PC, and re-types 265 dimensional data points (53 rows × 5 samples) plus paint parameters. | **Under 4 minutes per batch.** High-speed, 60 fps virtualized grid with keyboard-first numpad flow (`Tab` / `Enter`), clipboard paste-fill, and bulk instrument apply. | **92% time reduction.** Shifts ~2.5 hours/day of clerical data re-entry back into physical inspection on the shop floor. |
-| **Tolerance & GD&T Integrity** | **Formula fragility & blind entry.** Hardcoded text workarounds (e.g. `(2065)` forcing `=2065-2` manual formulas); critical typos (Nominal `10` entered as `Min 1 / Max 3`). Zero visual warning while typing. | **Point-of-entry GD&T validation.** Real-time color evaluation: 🟢 **PASS**, 🟡 **WARN** (within 10% of limit), 🔴 **FAIL**. Server re-verifies math on submit—client cannot tamper with verdicts. | Prevents out-of-spec parts from being packed or discovered later at customer receiving. |
-| **Coating Psychrometrics (ISO 12944-7)** | **Manual math & false non-conformances.** Recorded dew points guessed or handwritten. **Audited failure:** Steel recorded at $28.8^\circ\text{C}$ with Dew Point at $29.2^\circ\text{C}$ ($T_{steel} < T_{dew}$, margin $-0.4^\circ\text{C}$)—an immediate batch rejection on paper despite safe ambient physics. | **Automated Magnus-Tetens Engine.** Calculates true psychrometric dew point ($T_{dew}$) from Ambient Temp & %RH in real-time. **Hard safety lock** enforces $T_{steel} - T_{dew} \ge 3.0^\circ\text{C}$ and $RH \le 85\%$. | **Zero risk of failing an ISO 12944 paint audit.** The software physically refuses to sign off a non-compliant paint coat. |
-| **DFT Statistics (ISO 19840 / SSPC-PA2)** | **26 hidden shadow columns.** Merged-cell limitations forced inspector to create off-screen helper cells (`AK24:BJ27`) to compute Min/Max/Avg. Manually checking 52 readings against 80/200 rules is tedious and prone to oversight. | **Instant in-memory statistical engine.** Evaluates 26-point inside (240 µm) and outside (180 µm) grids; auto-computes Min, Max, Mean, $\sigma$, and exact ISO 19840 80/200 compliance in 50 ms. | Eliminates hidden spreadsheet corruption; delivers OEM-grade statistical film reports instantly. |
-| **Equipment & Calibration Traceability** | **100% missing records.** Typing equipment IDs 53 times per sheet was too tedious, leaving the `EQUIPMENT ID` column blank. Zero mechanism to prevent using an expired micrometer or caliper. | **Centralized instrument registry.** Bulk-apply instruments to all rows in 1 tap. System detects calibration due dates; blocks submission or raises mandatory review flags on expired gauges. | **1-click audit recall.** An auditor asks "which batches used caliper VC-04?"; answer in 3 seconds instead of 4 days of binder searching. |
-| **Cross-Stage Batch Continuity** | **Data divergence between stages.** Surface Prep had batch `2604-02` while Final Inspection had `2605-02` because dates crossed into May, breaking lot reconciliation in audits. | **Unified relational lot entity.** Dimensional inspection, surface prep, coat logs, and DFT share a single immutable batch record. Linked coating batch created in 1 click without re-typing. | Airtight lot genealogy from raw substrate blast to final dispatch. |
-| **Accountability & Sign-Off Gating** | **Unsigned, easily edited cells.** "Checked By" fields left blank or contain plain static text. Anyone with spreadsheet access can alter numbers after dispatch. | **Cryptographic dual sign-off & MFA.** Strict separation of duties (authors cannot approve). Quality Head approval requires TOTP MFA (AAL2). Decisions are immutable with audit timestamps. | Absolute legal and customer defense during warranty or quality claims. |
-| **Shop-Floor Resilience** | **Vulnerable to network & file loss.** Corrupted `.xlsx` files, accidental formula deletion, multi-user file lock conflicts, lost local files. | **Offline-first Dexie (IndexedDB) engine.** Survives shop-floor Wi-Fi blackspots with zero data loss. Auto-syncs queue on reconnect; multi-tab conflict guard locks duplicate tabs read-only. | Zero lost keystrokes; works reliably anywhere on the factory floor. |
-| **Audit Preparation & Export** | **Days of manual document assembly.** Pulling physical workbooks, scanning sheets, printing Excel grids with broken page margins, formatting inconsistencies. | **Deterministic print-CSS report engine.** One-click export of controlled **ST/QC/02** and **ST/QC/04** reports matching certified plant geometry. Audit trail logs every export. | Complete audit defense ready on demand during surprise OEM visits. |
+| Operational Dimension                           | Current Reality: Manual Excel Workbooks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Simran QC Platform (What We Built)                                                                                                                                                                                          | Direct Business Impact                                                                                                                          |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Inspection Throughput & Time**          | **45–60 minutes per batch.** Inspector writes readings on shop-floor paper notepads, walks to a desktop PC, and re-types 265 dimensional data points (53 rows × 5 samples) plus paint parameters.                                                                                                                                                                                                                                                                                                                                                                             | **Under 4 minutes per batch.** High-speed, 60 fps virtualized grid with keyboard-first numpad flow (`Tab` / `Enter`), clipboard paste-fill, and bulk instrument apply.                                            | **92% time reduction.** Shifts ~2.5 hours/day of clerical data re-entry back into physical inspection on the shop floor.                  |
+| **Tolerance & GD&T Integrity**            | **Formula fragility & blind entry.** Hardcoded text workarounds (e.g. `(2065)` forcing `=2065-2` manual formulas); critical typos (Nominal `10` entered as `Min 1 / Max 3`). Zero visual warning while typing.                                                                                                                                                                                                                                                                                                                                                          | **Point-of-entry GD&T validation.** Real-time color evaluation: 🟢 **PASS**, 🟡 **WARN** (within 10% of limit), 🔴 **FAIL**. Server re-verifies math on submit—client cannot tamper with verdicts. | Prevents out-of-spec parts from being packed or discovered later at customer receiving.                                                         |
+| **Coating Psychrometrics (ISO 12944-7)**  | **Manual math & false non-conformances.** Recorded dew points guessed or handwritten. **Audited failure:** Steel recorded at $28.8^\circ\text{C}$ with Dew Point at $29.2^\circ\text{C}$ ($T_{steel} < T_{dew}$, margin $-0.4^\circ\text{C}$)—an immediate batch rejection on paper despite safe ambient physics. | **Automated Magnus-Tetens Engine.** Calculates true psychrometric dew point ($T_{dew}$) from Ambient Temp & %RH in real-time. **Hard safety lock** enforces $T_{steel} - T_{dew} \ge 3.0^\circ\text{C}$ and $RH \le 85\%$. | **Zero risk of failing an ISO 12944 paint audit.** The software physically refuses to sign off a non-compliant paint coat.                                                                                            |                                                                                                                                                 |
+| **DFT Statistics (ISO 19840 / SSPC-PA2)** | **26 hidden shadow columns.** Merged-cell limitations forced inspector to create off-screen helper cells (`AK24:BJ27`) to compute Min/Max/Avg. Manually checking 52 readings against 80/200 rules is tedious and prone to oversight.                                                                                                                                                                                                                                                                                                                                          | **Instant in-memory statistical engine.** Evaluates 26-point inside (240 µm) and outside (180 µm) grids; auto-computes Min, Max, Mean, $\sigma$, and exact ISO 19840 80/200 compliance in 50 ms.                  | Eliminates hidden spreadsheet corruption; delivers OEM-grade statistical film reports instantly.                                                |
+| **Equipment & Calibration Traceability**  | **100% missing records.** Typing equipment IDs 53 times per sheet was too tedious, leaving the `EQUIPMENT ID` column blank. Zero mechanism to prevent using an expired micrometer or caliper.                                                                                                                                                                                                                                                                                                                                                                                 | **Centralized instrument registry.** Bulk-apply instruments to all rows in 1 tap. System detects calibration due dates; blocks submission or raises mandatory review flags on expired gauges.                         | **1-click audit recall.** An auditor asks "which batches used caliper VC-04?"; answer in 3 seconds instead of 4 days of binder searching. |
+| **Cross-Stage Batch Continuity**          | **Data divergence between stages.** Surface Prep had batch `2604-02` while Final Inspection had `2605-02` because dates crossed into May, breaking lot reconciliation in audits.                                                                                                                                                                                                                                                                                                                                                                                            | **Unified relational lot entity.** Dimensional inspection, surface prep, coat logs, and DFT share a single immutable batch record. Linked coating batch created in 1 click without re-typing.                         | Airtight lot genealogy from raw substrate blast to final dispatch.                                                                              |
+| **Accountability & Sign-Off Gating**      | **Unsigned, easily edited cells.** "Checked By" fields left blank or contain plain static text. Anyone with spreadsheet access can alter numbers after dispatch.                                                                                                                                                                                                                                                                                                                                                                                                                | **Cryptographic dual sign-off & MFA.** Strict separation of duties (authors cannot approve). Quality Head approval requires TOTP MFA (AAL2). Decisions are immutable with audit timestamps.                           | Absolute legal and customer defense during warranty or quality claims.                                                                          |
+| **Shop-Floor Resilience**                 | **Vulnerable to network & file loss.** Corrupted `.xlsx` files, accidental formula deletion, multi-user file lock conflicts, lost local files.                                                                                                                                                                                                                                                                                                                                                                                                                                | **Offline-first Dexie (IndexedDB) engine.** Survives shop-floor Wi-Fi blackspots with zero data loss. Auto-syncs queue on reconnect; multi-tab conflict guard locks duplicate tabs read-only.                         | Zero lost keystrokes; works reliably anywhere on the factory floor.                                                                             |
+| **Audit Preparation & Export**            | **Days of manual document assembly.** Pulling physical workbooks, scanning sheets, printing Excel grids with broken page margins, formatting inconsistencies.                                                                                                                                                                                                                                                                                                                                                                                                                   | **Deterministic print-CSS report engine.** One-click export of controlled **ST/QC/02** and **ST/QC/04** reports matching certified plant geometry. Audit trail logs every export.                         | Complete audit defense ready on demand during surprise OEM visits.                                                                              |
 
 ### The 3 Core Talking Points for Executive Leadership:
+
 1. **Time Reclamation:** *"Your quality team spends nearly an hour per batch wrestling with spreadsheet formatting, copying gauge IDs, and manually calculating tolerances. We cut that to under 4 minutes, freeing your inspectors to actually inspect parts."*
 2. **Defensible Compliance:** *"In your current Excel files, a simple transcription typo created a record stating you painted when steel was colder than dew point—an automatic ISO non-conformance. Our software runs the physics at the point of capture, making that humanly impossible."*
 3. **Audit Immunity:** *"When Flender, Winergy, or Siemens asks for full calibration and inspection genealogy for an order shipped six months ago, you don't spend a week digging through paper binders. You filter and export a certified dossier in 5 seconds."*
@@ -62,7 +62,7 @@ Each row = one demo beat. The value column is what you say out loud.
 
 | #  | Feature                                     | Screen                        | Value (the "so what")                                                                   |
 | -- | ------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
-| 1  | Provisioned accounts, one per role          | `/signup` (gate screen)     | Every account is issued by the admin with exactly one role — no self-service access  |
+| 1  | Provisioned accounts, one per role          | `/signup` (gate screen)     | Every account is issued by the admin with exactly one role — no self-service access    |
 | 2  | Login + TOTP MFA (QH/Admin)                 | `/login`                    | Approvals are cryptographically gated — a stolen password can't approve a lot          |
 | 3  | Dashboard KPI strip + drafts strip          | Dashboard                     | Answers "what needs me now?" in one screen; >24 h stale drafts flagged                  |
 | 4  | Dual create actions + recent-items-first    | Dashboard → New dimensional  | The two workflows are first-class; repeat items are one tap                             |
@@ -184,18 +184,45 @@ Timing target: **22–26 minutes.** Bold = what you click/type. *Italic* = what 
 ### Act 3 — The coating record and the safety gate (7 min)
 
 1. On the submitted batch, click **“Coating batch for this lot →”**. The header is **inherited** — *"one lot, two records, zero re-typing."*
-2. **Section A — Surface prep:** set **Comparator grade**, steel grade, blast **Sa 2.5**, grit size, profile **60 µm**.
+2. **Section A — Surface prep:**
+   - Steel grade: type **IS 2062 Gr. B**; Blast method: type **Airless Grit Blasting**.
+   - Blast grade: type **Sa 2.5** (ISO 8501-1); Grit size: type **G-40**.
+   - Select **Comparator grade → Medium (G)**.
+   - Check all three pre-treatment verification checkmarks:
+     - ☑ **Welds / edges dressed smooth (P-2)**
+     - ☑ **Solvent clean per ISO 12944-4**
+     - ☑ **Water break test — no beading**
+   - Profile µm: type **60** → live chip **PASS (45–75 µm)** (green).
+     - *Demo out-of-range:* type **35** → flips to **OUT OF RANGE (<45 µm)** (red). Reset to **60**.
+   - Profile gauge: select **DG-01 — Elcometer 456**.
 3. **Section B — Psychrometrics.** Two takes:
-   - **Safe:** Ambient **25.0 °C**, RH **50 %**, Steel **30.0 °C** → dew point ≈ 13.9 °C, ΔT ≈ **16.1 °C** → **APPROVED**.
+   - **Safe:** Ambient **25.0 °C**, RH **50 %**, Steel **30.0 °C** → dew point ≈ 13.9 °C, ΔT ≈ **16.1 °C** → **APPROVED** (green).
    - **Prohibited:** set RH **90 %** → the panel **locks**. *"ISO 12944 says above 85 % RH you do not paint. The software agrees, and it won't let you sign."*
-   - Reset RH to **50 %** to proceed.
-4. **Section C — Coat log:** product **Interthane 990**, RAL **7035**, Part A batch + **mfg date today** → shelf-life green.
-   - Change mfg date to **2024-01-01** → *"Shelf life expired”* hard block. Reset to today.
+   - *Demo Delta-T failure:* set Ambient **25.0 °C**, RH **70 %**, Steel **21.0 °C** → dew point ≈ 19.4 °C, ΔT ≈ **1.6 °C < 3 °C** → **PROHIBITED** (red).
+   - Reset RH to **50 %** and Steel to **30.0 °C** to proceed.
+4. **Section C — Coat log:** show the live build-up stack pills at top (Coat 1 / Coat 2 / Coat 3).
+   - **Coat 1 (Primer):** Product **Interplus 256**, Part A batch **IPA-2609**, Part B **IPB-881**, mfg date **today**, Thinner **5 %**, WFT readings **110 / 115 / 110** → average **112 µm** (green).
+   - **Coat 2 (Intermediate):** Product **Intergard 475HS**, Part A batch **IGA-2609**, Part B **IGB-475**, mfg date **today**, Thinner **5 %**, WFT readings **160 / 165 / 160** → average **162 µm** (green).
+   - **Coat 3 (PU Finish):** Product **Interthane 990**, RAL **7035**, Part A batch **ITA-2609**, Part B **ITB-104**, mfg date **today** → shelf-life chip displays **VALID** (green).
+     - *Shelf-life hard block demo:* change mfg date to **2024-01-01** → *"Shelf life expired”* hard block (red). *"Expired material physically cannot be signed onto a lot."*
+     - Reset mfg date to **today** (clears the block).
+     - Thinner: **10 %**, WFT readings **80 / 85 / 80** → average **82 µm** (green).
 5. **Section D — DFT.** Nominal **240 µm** inside / **180 µm** outside.
+   - Point out that **profile gauge DG-01** carries through from Section A automatically.
    - Type **240** across a few inside points → live **Mean/Min/Max/σ** and **ISO 19840 PASS**.
-   - Type **150** in one inside point → **below the 80 % floor (192 µm)** → verdict flips to **FAIL**. Reset it.
-6. **Section E — Visual checks:** mark **Blisters = Fail** → the **n-of-5** counter updates and the **Draft NCR** path lights up.
-7. Submit the coating batch.
+   - *80/200 rule demo:* type **150** in one inside point → **below the 80 % floor (192 µm)** → verdict flips to **FAIL**.
+   - *Ceiling demo:* type **500** in one inside point → **above the 200 % cap (480 µm)** → verdict flips to **FAIL**.
+   - Reset value to **240** (clears the fail).
+6. **Section E — Visual checks:**
+   - Walk through the 5 standardized defect criteria:
+     1. Runs & sags → **Pass**
+     2. Blistering → mark **Fail** → the **n-of-5** counter drops to **4/5**, warning banner appears, and the **Draft NCR** action lights up.
+     3. Pinholes / Porosity → **Pass**
+     4. Orange peel → **Pass**
+     5. Dry spray / Overspray → **Pass**
+   - Click **Draft NCR**: show the modal pre-filling batch ID, item code, and defect details automatically.
+   - Reset Blistering back to **Pass** to clear the gate.
+7. Submit the coating batch. Show the submission checklist ensuring all 5 sections are green.
 
 ### Act 4 — Quality Head review & dual sign-off (4 min)
 
@@ -237,7 +264,21 @@ Timing target: **22–26 minutes.** Bold = what you click/type. *Italic* = what 
 
 Row **DIM-01** is the **reference** dimension and is intentionally **locked**.
 
-**Psychrometrics** (Section B)
+**Surface Preparation (Section A)**
+
+| Field               | Demo Value                          | Acceptance Criteria / Verification       |
+| ------------------- | ----------------------------------- | ---------------------------------------- |
+| Steel grade         | `IS 2062 Gr. B`                     | Substrate specification                  |
+| Blast method        | `Airless Grit Blasting`             | Mechanical abrasive cleaning             |
+| Blast grade         | `Sa 2.5`                            | ISO 8501-1 near-white bare metal         |
+| Grit size           | `G-40`                              | Angular chilled iron grit                |
+| Comparator grade    | `Medium (G)`                        | ISO 8501-3 surface profile comparator    |
+| Pre-treatment       | Welds (P-2) / Solvent / Water break | All 3 checkboxes checked                 |
+| Surface profile µm  | `60`                                | Working band **45–75 µm** (green PASS)   |
+| Profile fail demo   | `35`                                | Red chip **OUT OF RANGE (<45 µm)**       |
+| Profile gauge       | `DG-01 — Elcometer 456`             | Verified in-calibration instrument       |
+
+**Psychrometrics (Section B)**
 
 | Scenario     | Ambient  | RH   | Steel    | Result                          |
 | ------------ | -------- | ---- | -------- | ------------------------------- |
@@ -245,12 +286,31 @@ Row **DIM-01** is the **reference** dimension and is intentionally **locked**.
 | RH lock-out  | 25.0 °C | 90 % | 30.0 °C | PROHIBITED (RH > 85 %)          |
 | ΔT lock-out | 25.0 °C | 70 % | 21.0 °C | PROHIBITED (ΔT ≈ 1.6 °C < 3) |
 
-**DFT** (Section D) — inside nominal **240 µm** (80 % floor = 192, 200 % cap = 480); outside nominal **180 µm** (floor 144, cap 360)
+**Coat Log (Section C)**
+
+| Coat | Layer Name        | Product Name       | Shade / RAL | Part A Batch | Part B Batch | Mfg Date   | Shelf-Life | Thinner % | WFT Readings (µm) | Avg WFT |
+| ---- | ----------------- | ------------------ | ----------- | ------------ | ------------ | ---------- | ---------- | --------- | ----------------- | ------- |
+| 1    | Primer Coat       | `Interplus 256`    | Aluminium   | `IPA-2609`   | `IPB-881`    | Today      | **VALID**  | 5 %       | `110, 115, 110`   | 112 µm  |
+| 2    | Intermediate Coat | `Intergard 475HS`  | Grey        | `IGA-2609`   | `IGB-475`    | Today      | **VALID**  | 5 %       | `160, 165, 160`   | 162 µm  |
+| 3    | PU Finish Coat    | `Interthane 990`   | `RAL 7035`  | `ITA-2609`   | `ITB-104`    | Today      | **VALID**  | 10 %      | `80, 85, 80`      | 82 µm   |
+| —    | **Expired Demo**  | `Interthane 990`   | `RAL 7035`  | `ITA-2609`   | `ITB-104`    | 2024-01-01 | **EXPIRED**| —         | —                 | Blocked |
+
+**DFT (Section D)** — inside nominal **240 µm** (80 % floor = 192, 200 % cap = 480); outside nominal **180 µm** (floor 144, cap 360)
 
 | Side    | PASS    | FAIL (below 80 %) | FAIL (above 200 %) |
 | ------- | ------- | ----------------- | ------------------ |
 | Inside  | `240` | `150`           | `500`            |
 | Outside | `180` | `120`           | `380`            |
+
+**Visual Checks (Section E)**
+
+| Inspection Item         | Standard Result | Demo Trigger / Action                                       |
+| ----------------------- | --------------- | ----------------------------------------------------------- |
+| Runs & sags             | Pass            | Visual barrier verification                                 |
+| Blistering (ASTM D714)  | Fail (Demo)     | Flips score to **4/5**, lights up **Draft NCR** flow        |
+| Pinholes / Porosity     | Pass            | High-voltage sponge / visual check                          |
+| Orange peel             | Pass            | Surface levelling verification                              |
+| Dry spray / Overspray   | Pass            | Adhesion barrier verification                               |
 
 **Instruments:** `VC-04` calliper · `MC-02` micrometer · `DG-01` DFT gauge · `HG-01` hygrometer · `PG-01` surface thermometer.
 To demo **expiry**, use Admin → Instruments to set a gauge's last-calibration date to **2024-01-01** (12-month interval) → status **EXPIRED**; selecting it on a reading raises the EQ-03 flag + mandatory acknowledgement at review.
@@ -273,18 +333,21 @@ flowchart LR
 ```
 
 ### 1. 📐 Blueprint Vision: AI Engineering Drawing Ingestion (CAD/PDF to Item Master)
+
 - **The Friction:** Onboarding a new customer component (e.g., Flender Spiral Air Duct Cap `W1G00005572` or custom blower housings) requires manually transcribing 50+ dimensions, nominals, upper/lower tolerances, and GD&T symbols into the system—taking 45–60 minutes per item.
 - **AI Automation:** A multi-modal Vision AI pipeline ingests 2D engineering drawings (PDF, DWG, or TIFF). It parses dimension callouts, standard tolerance tables (ISO 2768-mK), and feature control frames, automatically generating a draft Item Master template.
 - **Human-in-the-Loop:** Displays a split-screen side-by-side verification diff for the Quality Head to review and approve in under 90 seconds.
 - **Value to Simran:** Dramatically accelerates RFQ-to-production turnaround for new OEM contracts.
 
 ### 2. 📈 Predictive Process Drift & Tool Wear Intelligence (AI-SPC)
+
 - **The Friction:** Stamping dies, deep-drawing tools, and CNC cutting inserts wear down gradually over time. Today, Simran Technocrats only discovers tool degradation when a batch fails final inspection, resulting in costly scrap or urgent rework.
 - **AI Automation:** Statistical Process Control (SPC) machine learning models analyze dimensional trends across the last 20–100 consecutive batches. The AI identifies systematic micro-drifts (e.g., *Dimension DIM-08 creeping +0.012 mm every 5 batches towards the upper limit*).
 - **Actionable Insight:** Delivers proactive toolroom alerts: *"Tooling for DIM-08 is within 15% of upper tolerance threshold. Recommend die regrind or insert replacement before Batch #2610."*
 - **Value to Simran:** Prevents batch scrap before it happens; transforms reactive quality control into predictive quality assurance.
 
 ### 3. 📑 Automated NCR Root-Cause & 8D Synthesis
+
 - **The Friction:** When a part or coating reading fails, drafting Non-Conformance Reports (NCR) and 8D customer defense documents is delayed, administratively painful, and often lacks deep statistical correlation.
 - **AI Automation:** The moment an inspector flags an NCR or a reading fails hard, an AI reasoning agent synthesizes:
   - The failing parameter and delta from nominal;
@@ -294,6 +357,7 @@ flowchart LR
 - **Value to Simran:** Reduces 8D response time to Tier-1 OEMs from 5 days to 2 hours with audit-grade rigor.
 
 ### 4. 🎙️ Hands-Free Voice Capture & Direct Bluetooth Gauge Telemetry
+
 - **The Friction:** On the shop floor, technicians measuring large or heavy weldments with both hands must repeatedly put down tools, walk over to a computer, and type readings.
 - **AI Automation:**
   - **Industrial Voice Assistant:** Noise-resilient, shop-floor tuned acoustic model allows hands-free numeric dictation (*"Row eight, sample two: one zero zero point four five"*).
@@ -301,11 +365,13 @@ flowchart LR
 - **Value to Simran:** Cuts physical measurement logging time by an additional 60% and eliminates keyboard contamination in grimy plant environments.
 
 ### 5. 👁️ Computer Vision Surface Defect & Coating Anomaly Classifier
+
 - **The Friction:** Section E visual inspection (runs, sags, blisters, pinholes, orange peel, overspray) is currently subjective, relying entirely on the visual acuity and judgment of individual operators.
 - **AI Automation:** Tablet camera capture of the blasted substrate and cured coating. An edge computer vision model, pre-trained on ISO 8501-1 (surface cleanliness) and ASTM D714 (blistering standards), scans the surface photo, detects anomalies, and assigns an objective defect severity score.
 - **Value to Simran:** Standardizes visual coating quality across shifts and protects against subjective rejection claims by customer receiving inspectors.
 
 ### 6. 💬 Conversational OEM Audit Defense Agent
+
 - **The Friction:** When Flender, Siemens, or ISO auditors arrive for on-site surveillance audits, answering complex impromptu queries (*"Show every batch shipped under PO-4400 with coating applied when RH was above 75%, and identify which gauge verified them"*) triggers hours of stressful spreadsheet hunting.
 - **AI Automation:** A natural language retrieval agent over the historical database. The Quality Head speaks or types the auditor's question in plain English and receives an authenticated, tamper-evident audit dossier with supporting calibration certificates in under 5 seconds.
 - **Value to Simran:** Projects an image of absolute technological sophistication that instills supreme confidence in Tier-1 OEM auditors.

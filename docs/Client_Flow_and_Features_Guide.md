@@ -97,13 +97,16 @@ From the dimensional batch, one click — **"Coating batch for this lot →"** �
 ![Coating hand-off](assets/guide/03-coating-handoff.png)
 *Stage 3 — the hand-off screen: the header is marked INHERITED — zero re-typing, one lot identity across both records.*
 
-The coating wizard has five sections, each with its own enforcement:
+The coating wizard has five sections, each with its own physical and standard-based enforcement:
 
-- **A — Surface prep:** comparator grade, blast Sa 2.5, profile 60 µm.
-- **B — Psychrometrics (the dew point watchdog):** enter Ambient **25.0 °C**, RH **50 %**, Steel **30.0 °C** → the engine computes dew point **≈ 13.9 °C** and ΔT **≈ 16.1 °C** → **APPROVED**. Now set RH to **90 %** → the panel **locks**: ISO 12944 forbids painting above 85 % RH or below 3 °C above dew point, and the software physically refuses the sign-off. *This is the exact failure your audit found on paper (29.2 °C vs 28.8 °C). It cannot happen here.*
-- **C — Coat log:** product **Interthane 990**, RAL **7035**, Part A batch + manufacturing date. Enter a manufacturing date of **2024-01-01** → **"Shelf life expired"** hard block — expired material cannot be signed onto a lot.
-- **D — DFT (ISO 19840 / SSPC-PA 2):** 26-point grids per side. Nominal **240 µm** inside → the live panel shows **Mean / Min / Max / σ** and the verdict. Type **150** at one point → below the 80 % floor (192 µm) → verdict flips to **FAIL**. No hidden "shadow cells" to break — the statistics engine lives in one audited place.
-- **E — Visual checks:** structured n-of-5 defect capture. Marking **Blisters = Fail** lights up the **Draft NCR** path.
+- **A — Surface prep:** steel grade **IS 2062 Gr. B**, blast method **Airless Grit Blasting**, blast grade **Sa 2.5** (ISO 8501-1), grit size **G-40**, comparator grade **Medium (G)**, and all 3 pre-treatment checkmarks (welds P-2, solvent clean, water break test). Enter surface profile **60 µm** → live chip **PASS (45–75 µm)**. Test typing **35 µm** → chip flips to red **OUT OF RANGE (<45 µm)**. Assign profile gauge **DG-01**.
+- **B — Psychrometrics (the dew point watchdog):** enter Ambient **25.0 °C**, RH **50 %**, Steel **30.0 °C** → the engine computes dew point **≈ 13.9 °C** and ΔT **≈ 16.1 °C** → **APPLICATION PERMITTED** (green). Now set RH to **90 %** (or Steel to **21.0 °C**) → the panel **locks**: ISO 12944 forbids painting above 85 % RH or below 3 °C above dew point, and the software physically refuses the sign-off. *This is the exact failure your audit found on paper (29.2 °C vs 28.8 °C). It cannot happen here.* Reset to safe conditions to proceed.
+- **C — Coat log:** show the live build-up stack pills at top (Coat 1 / Coat 2 / Coat 3).
+  - **Coat 1 (Primer):** Product **Interplus 256**, Part A **IPA-2609**, Part B **IPB-881**, mfg date **today**, Thinner **5 %**, WFT **110 / 115 / 110 µm** → average **112 µm** (green).
+  - **Coat 2 (Intermediate):** Product **Intergard 475HS**, Part A **IGA-2609**, Part B **IGB-475**, mfg date **today**, Thinner **5 %**, WFT **160 / 165 / 160 µm** → average **162 µm** (green).
+  - **Coat 3 (PU Finish):** Product **Interthane 990**, RAL **7035**, Part A batch + **mfg date today** → shelf-life green (**VALID**). Change mfg date to **2024-01-01** → **"Shelf life expired"** hard block (red) — expired material cannot be signed onto a lot. Reset to today. Record Thinner **10 %** and WFT **80 / 85 / 80 µm** → average **82 µm**.
+- **D — DFT (ISO 19840 / SSPC-PA 2):** 26-point grids per side. Gauge **DG-01** carried over automatically from Section A. Nominal **240 µm** inside → the live panel shows **Mean / Min / Max / σ** and the ISO 19840 verdict. Type **150** at one point → below the 80 % floor (192 µm) → verdict flips to **FAIL**. Type **500** at one point → above the 200 % cap (480 µm) → flips to **FAIL**. Reset to **240** to restore **PASS**. No hidden "shadow cells" to break — the statistics engine lives in one audited place.
+- **E — Visual checks:** structured 5-attribute defect capture (runs & sags, blistering, pinholes, orange peel, dry spray). Marking **Blisters = Fail** flips the counter to **4/5**, displays a defect alert, and lights up the **Draft NCR** path with pre-filled lot context. Reset to **Pass** to clear the gate.
 
 ![Surface prep](assets/guide/03-coating-a.png)
 *Section A — surface preparation: comparator grade, blast Sa 2.5, profile with a live verdict chip, and the ISO 8501-3 pre-treatment checks.*
